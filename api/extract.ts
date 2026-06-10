@@ -6,7 +6,7 @@ import {
 } from '@aws-sdk/client-textract'
 
 const client = new TextractClient({
-  rregion: process.env.AWS_REGION ?? 'eu-west-1',
+  region: process.env.AWS_REGION ?? 'eu-west-1',
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
