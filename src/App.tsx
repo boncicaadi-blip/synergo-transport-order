@@ -245,7 +245,7 @@ export default function App() {
       <div className="mx-5 mt-3 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
         <div
           className="flex items-center justify-between px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-white"
-          style={{ background: INDIGO }}
+          style={{ background: INDIGO, color: "white" }}
         >
           <span>Detalii Rută</span>
           <button
@@ -334,7 +334,7 @@ export default function App() {
       <div className="mx-5 mt-3 mb-12 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
         <div
           className="px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-white"
-          style={{ background: INDIGO }}
+          style={{ background: INDIGO, color: "white" }}
         >
           Observații
         </div>
@@ -353,7 +353,7 @@ export default function App() {
         className="fixed bottom-0 left-0 right-0 text-[10px] px-5 py-1.5 flex items-center justify-between"
         style={{ background: INDIGO, color: 'rgba(255,255,255,0.7)' }}
       >
-        <span>Client: DIDI TRANS INTERNATIONAL SRL · Mediu: [Producție] · Versiune: 25.1.1.17</span>
+        
         <span style={{ color: MAGENTA }}>Created by Novasoft</span>
       </footer>
     </div>
