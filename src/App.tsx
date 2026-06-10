@@ -12,7 +12,7 @@ function Field({ label, value, onChange }: {
     <div className="flex items-center gap-1">
       <label className="text-[11px] text-gray-500 w-28 shrink-0 text-right pr-1">{label}</label>
       <input
-        className="flex-1 border border-gray-300 rounded px-2 py-[3px] text-[12px] focus:outline-none focus:ring-1 focus:ring-nova-blue bg-white"
+        className="flex-1 border border-gray-300 rounded px-2 py-[3px] text-[12px] focus:outline-none focus:ring-1 focus:ring-[#2980DA] bg-white"
         value={value}
         onChange={e => onChange(e.target.value)}
       />
@@ -29,7 +29,7 @@ function Select({ label, value, onChange, options }: {
       <label className="text-[11px] text-gray-500 w-28 shrink-0 text-right pr-1">{label}</label>
       <div className="flex-1 relative">
         <select
-          className="w-full border border-gray-300 rounded px-2 py-[3px] text-[12px] focus:outline-none focus:ring-1 focus:ring-nova-blue bg-white appearance-none pr-6"
+          className="w-full border border-gray-300 rounded px-2 py-[3px] text-[12px] focus:outline-none focus:ring-1 focus:ring-[#2980DA] bg-white appearance-none pr-6"
           value={value}
           onChange={e => onChange(e.target.value)}
         >
@@ -43,7 +43,7 @@ function Select({ label, value, onChange, options }: {
 
 function SectionTitle({ children }: { children: string }) {
   return (
-    <div className="bg-nova-indigo text-white text-[11px] font-bold uppercase tracking-wider px-3 py-1 mb-2">
+    <div className="bg-[#0B178B] text-white text-[11px] font-bold uppercase tracking-wider px-3 py-1 mb-2">
       {children}
     </div>
   )
@@ -85,7 +85,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f0f0f0] text-[12px]">
-      <header className="bg-nova-indigo h-12 flex items-center justify-between px-4 shadow-md">
+      <header className="bg-[#0B178B] h-12 flex items-center justify-between px-4 shadow-md">
         <div className="flex items-center gap-3">
           <img
             src="https://nova-soft.ro/wp-content/uploads/2023/03/logo-synergo-alb.png"
@@ -95,7 +95,7 @@ export default function App() {
           <span className="text-white/60 text-xs">|</span>
           <span className="text-white text-[13px] font-medium tracking-wide">
             Comandă Rutieră
-            {order.numar && <span className="text-nova-magenta font-bold ml-2">· {order.numar}</span>}
+            {order.numar && <span className="text-[#DA387E] font-bold ml-2">· {order.numar}</span>}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -106,13 +106,13 @@ export default function App() {
           >
             <RefreshCw className="w-3 h-3" /> Nou
           </button>
-          <button className="flex items-center gap-1.5 text-[11px] text-white bg-nova-magenta hover:bg-pink-600 px-3 py-1.5 rounded transition-colors">
+          <button className="flex items-center gap-1.5 text-[11px] text-white bg-[#DA387E] hover:bg-pink-600 px-3 py-1.5 rounded transition-colors">
             <Save className="w-3 h-3" /> Salvează
           </button>
         </div>
       </header>{showImport && (
         <div className="mx-4 mt-3 bg-white border border-gray-200 rounded shadow-sm">
-          <div className="bg-gradient-to-r from-nova-indigo to-nova-blue text-white text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 flex items-center justify-between rounded-t">
+          <div className="bg-gradient-to-r from-[#0B178B] to-[#2980DA] text-white text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 flex items-center justify-between rounded-t">
             <span>Import Document Transport (CMR / Confirmare)</span>
             <button onClick={() => setShowImport(false)} className="text-white/60 hover:text-white text-lg leading-none">×</button>
           </div>
@@ -128,7 +128,7 @@ export default function App() {
       )}
       {!showImport && (
         <div className="mx-4 mt-2">
-          <button onClick={() => setShowImport(true)} className="text-[11px] text-nova-blue hover:underline flex items-center gap-1">
+          <button onClick={() => setShowImport(true)} className="text-[11px] text-[#2980DA] hover:underline flex items-center gap-1">
             <Plus className="w-3 h-3" /> Import document PDF
           </button>
         </div>
@@ -180,7 +180,7 @@ export default function App() {
       </div>
 
       <div className="mx-4 mt-2 bg-white border border-gray-200 rounded shadow-sm">
-        <div className="bg-nova-indigo text-white text-[11px] font-bold uppercase tracking-wider px-3 py-1 flex items-center justify-between rounded-t">
+        <div className="bg-[#0B178B] text-white text-[11px] font-bold uppercase tracking-wider px-3 py-1 flex items-center justify-between rounded-t">
           <span>Detalii Rută</span>
           <button onClick={addDetail} className="flex items-center gap-1 text-[10px] bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded transition-colors">
             <Plus className="w-3 h-3" /> Adaugă linie
@@ -235,7 +235,7 @@ export default function App() {
                     {(['partener', 'localitate', 'firma', 'referinta', 'articolMarfa'] as const).map(field => (
                       <td key={field} className="px-2 py-1">
                         <input
-                          className="border border-gray-300 rounded px-1 py-0.5 text-[11px] w-28 bg-white focus:outline-none focus:ring-1 focus:ring-nova-blue"
+                          className="border border-gray-300 rounded px-1 py-0.5 text-[11px] w-28 bg-white focus:outline-none focus:ring-1 focus:ring-[#2980DA]"
                           value={d[field] as string}
                           onChange={e => updateDetail(d.id, field, e.target.value)}
                         />
@@ -258,7 +258,7 @@ export default function App() {
         <SectionTitle>Observații</SectionTitle>
         <div className="px-3 pb-3">
           <textarea
-            className="w-full border border-gray-300 rounded px-2 py-1.5 text-[12px] focus:outline-none focus:ring-1 focus:ring-nova-blue resize-none"
+            className="w-full border border-gray-300 rounded px-2 py-1.5 text-[12px] focus:outline-none focus:ring-1 focus:ring-[#2980DA] resize-none"
             rows={3}
             value={order.observatii}
             onChange={e => set('observatii')(e.target.value)}
@@ -266,7 +266,7 @@ export default function App() {
         </div>
       </div>
 
-      <footer className="fixed bottom-0 left-0 right-0 bg-nova-indigo text-white/60 text-[10px] px-4 py-1 flex items-center justify-between">
+      <footer className="fixed bottom-0 left-0 right-0 bg-[#0B178B] text-white/60 text-[10px] px-4 py-1 flex items-center justify-between">
         <span>Client: DIDI TRANS INTERNATIONAL SRL · Mediu: [Producție] · Versiune: 25.1.1.17</span>
         <span>Created by Novasoft</span>
       </footer>
