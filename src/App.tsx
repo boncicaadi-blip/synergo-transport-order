@@ -16,9 +16,9 @@ function Field({ label, value, onChange }: {
 }) {
   return (
     <div className="grid grid-cols-[120px_1fr] items-center gap-2 py-[3px]">
-      <label className="text-[11px] text-gray-500 text-right">{label}</label>
+      <label style={{ fontSize: '11px', color: '#6b7280', textAlign: 'right' }}>{label}</label>
       <input
-        className="border border-gray-300 rounded px-2 py-[3px] text-[12px] bg-white focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
+        style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 8px', fontSize: '12px', background: 'white', outline: 'none' }}
         value={value}
         onChange={e => onChange(e.target.value)}
       />
@@ -34,16 +34,16 @@ function SelectField({ label, value, onChange, options }: {
 }) {
   return (
     <div className="grid grid-cols-[120px_1fr] items-center gap-2 py-[3px]">
-      <label className="text-[11px] text-gray-500 text-right">{label}</label>
-      <div className="relative">
+      <label style={{ fontSize: '11px', color: '#6b7280', textAlign: 'right' }}>{label}</label>
+      <div style={{ position: 'relative' }}>
         <select
-          className="w-full border border-gray-300 rounded px-2 py-[3px] text-[12px] bg-white focus:outline-none focus:border-blue-400 appearance-none pr-6"
+          style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 24px 2px 8px', fontSize: '12px', background: 'white', outline: 'none', appearance: 'none' }}
           value={value}
           onChange={e => onChange(e.target.value)}
         >
           {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-        <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+        <ChevronDown style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', width: '12px', height: '12px', color: '#9ca3af', pointerEvents: 'none' }} />
       </div>
     </div>
   )
@@ -51,14 +51,11 @@ function SelectField({ label, value, onChange, options }: {
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded border border-gray-200 shadow-sm overflow-hidden">
-      <div
-        className="px-3 py-2 text-[11px] font-bold uppercase tracking-widest"
-        style={{ background: INDIGO, color: 'white' }}
-      >
+    <div style={{ background: 'white', borderRadius: '6px', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+      <div style={{ background: INDIGO, color: 'white', padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
         {title}
       </div>
-      <div className="px-4 py-3">
+      <div style={{ padding: '10px 16px' }}>
         {children}
       </div>
     </div>
@@ -84,17 +81,8 @@ export default function App() {
     const d: RouteDetail = {
       id: Date.now().toString(),
       ord: order.detalii.length + 1,
-      tip: 'I',
-      regim: 'Tur',
-      asociere: '',
-      data: '',
-      ora: '12:00:00',
-      status: '',
-      partener: '',
-      localitate: '',
-      firma: '',
-      referinta: '',
-      articolMarfa: '',
+      tip: 'I', regim: 'Tur', asociere: '', data: '', ora: '12:00:00',
+      status: '', partener: '', localitate: '', firma: '', referinta: '', articolMarfa: '',
     }
     setOrder(prev => ({ ...prev, detalii: [...prev.detalii, d] }))
   }
@@ -109,91 +97,71 @@ export default function App() {
     }))
 
   return (
-    <div
-      className="min-h-screen text-[12px]"
-      style={{ background: '#eef0f5', fontFamily: '"Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif' }}
-    >
+    <div style={{ minHeight: '100vh', background: '#eef0f5', fontFamily: '"Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif', fontSize: '12px' }}>
+
       {/* HEADER */}
-      <header
-        className="flex items-center justify-between px-5 h-14 shadow-lg"
-        style={{ background: `linear-gradient(135deg, ${INDIGO} 0%, #1a2fa0 100%)` }}
-      >
-        <div className="flex items-center gap-4">
+      <header style={{ background: `linear-gradient(135deg, ${INDIGO} 0%, #1a2fa0 100%)`, height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <img
             src="https://nova-soft.ro/wp-content/uploads/2023/03/logo-synergo-alb.png"
-            alt="Synergo"
-            className="h-8"
+            alt="Synergo" style={{ height: '32px' }}
             onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
           />
-          <div className="h-6 w-px bg-white/20" />
+          <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.2)' }} />
           <div>
-            <div className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.6)' }}>Rutier</div>
-            <div className="text-[13px] font-semibold leading-tight text-white">
+            <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.6)' }}>Rutier</div>
+            <div style={{ fontSize: '13px', fontWeight: '600', color: 'white' }}>
               Comandă Rutieră
-              {order.numar && (
-                <span className="ml-2 font-bold" style={{ color: MAGENTA }}>· {order.numar}</span>
-              )}
+              {order.numar && <span style={{ marginLeft: '8px', color: MAGENTA, fontWeight: 'bold' }}>· {order.numar}</span>}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-white px-2 py-1 rounded-full font-medium" style={{ background: 'rgba(34,197,94,0.85)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '10px', background: 'rgba(34,197,94,0.85)', color: 'white', padding: '4px 10px', borderRadius: '999px', fontWeight: '500' }}>
             ● Înregistrare editabilă
           </span>
           <button
             onClick={() => setShowImport(s => !s)}
-            className="flex items-center gap-1.5 text-[11px] text-white px-3 py-1.5 rounded-lg transition-colors border border-white/20 hover:bg-white/10"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'white', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}
           >
-            <FileUp className="w-3.5 h-3.5" />
+            <FileUp style={{ width: '14px', height: '14px' }} />
             Import PDF
           </button>
           <button
             onClick={() => { setOrder(emptyOrder()); setExtracted(false); setShowImport(true) }}
-            className="flex items-center gap-1.5 text-[11px] text-white px-3 py-1.5 rounded-lg transition-colors border border-white/20 hover:bg-white/10"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'white', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <RefreshCw style={{ width: '14px', height: '14px' }} />
             Nou
           </button>
-          <button
-            className="flex items-center gap-1.5 text-[11px] text-white px-3 py-1.5 rounded-lg transition-colors font-medium shadow"
-            style={{ background: MAGENTA }}
-          >
-            <Save className="w-3.5 h-3.5" />
+          <button style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'white', background: MAGENTA, border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}>
+            <Save style={{ width: '14px', height: '14px' }} />
             Salvează
           </button>
         </div>
       </header>
 
       {/* BREADCRUMB */}
-      <div className="px-5 py-1.5 text-[10px] text-gray-500 border-b border-gray-200 bg-white flex items-center gap-1">
+      <div style={{ padding: '6px 20px', fontSize: '10px', color: '#6b7280', borderBottom: '1px solid #e5e7eb', background: 'white', display: 'flex', alignItems: 'center', gap: '4px' }}>
         <span>Rutier</span>
-        <span className="mx-1">›</span>
+        <span>›</span>
         <span>Comenzi rutiere</span>
-        <span className="mx-1">›</span>
-        <span className="font-medium" style={{ color: INDIGO }}>
-          {order.numar || 'Comandă nouă'}
-        </span>
+        <span>›</span>
+        <span style={{ fontWeight: '500', color: INDIGO }}>{order.numar || 'Comandă nouă'}</span>
       </div>
 
       {/* IMPORT PDF */}
       {showImport && (
-        <div className="mx-5 mt-4 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-          <div
-            className="flex items-center justify-between px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-white"
-            style={{ background: `linear-gradient(90deg, ${INDIGO}, ${BLUE})` }}
-          >
+        <div style={{ margin: '16px 20px 0', background: 'white', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+          <div style={{ background: `linear-gradient(90deg, ${INDIGO}, ${BLUE})`, color: 'white', padding: '8px 16px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>Import Document Transport (CMR / Confirmare de comandă)</span>
-            <button
-              onClick={() => setShowImport(false)}
-              className="text-white/70 hover:text-white text-xl leading-none"
-            >×</button>
+            <button onClick={() => setShowImport(false)} style={{ color: 'rgba(255,255,255,0.7)', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', lineHeight: 1 }}>×</button>
           </div>
-          <div className="p-4">
+          <div style={{ padding: '16px' }}>
             <PdfDropZone onExtracted={handleExtracted} />
             {extracted && (
-              <div className="mt-3 flex items-center gap-2 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">
-                <span>✓</span>
-                <span>Date extrase cu Amazon Textract — verifică și completează câmpurile lipsă</span>
+              <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#065f46', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '4px', padding: '8px 12px' }}>
+                <span>✓ Date extrase cu Amazon Textract — verifică și completează câmpurile lipsă</span>
               </div>
             )}
           </div>
@@ -201,7 +169,7 @@ export default function App() {
       )}
 
       {/* ANTET - 3 coloane */}
-      <div className="mx-5 mt-3 grid grid-cols-3 gap-3">
+      <div style={{ margin: '12px 20px 0', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
         <Panel title="Client">
           <Field label="Data" value={order.data} onChange={set('data')} />
           <Field label="Număr" value={order.numar} onChange={set('numar')} />
@@ -213,12 +181,8 @@ export default function App() {
         </Panel>
 
         <Panel title="Tarif">
-          <SelectField
-            label="Tip transport"
-            value={order.tipTransport}
-            onChange={set('tipTransport')}
-            options={[{ value: '', label: '—' }, { value: 'FTL', label: 'FTL' }, { value: 'LTL', label: 'LTL' }]}
-          />
+          <SelectField label="Tip transport" value={order.tipTransport} onChange={set('tipTransport')}
+            options={[{ value: '', label: '—' }, { value: 'FTL', label: 'FTL' }, { value: 'LTL', label: 'LTL' }]} />
           <Field label="Regim transport" value={order.regimTransport} onChange={set('regimTransport')} />
           <Field label="Cotă TVA (%)" value={order.cotaTVA} onChange={set('cotaTVA')} />
           <Field label="Monedă" value={order.moneda} onChange={set('moneda')} />
@@ -242,84 +206,69 @@ export default function App() {
       </div>
 
       {/* DETALII RUTĂ */}
-      <div className="mx-5 mt-3 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        <div
-          className="flex items-center justify-between px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-white"
-          style={{ background: INDIGO, color: "white" }}
-        >
+      <div style={{ margin: '12px 20px 0', background: 'white', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+        <div style={{ background: INDIGO, color: 'white', padding: '8px 16px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span>Detalii Rută</span>
-          <button
-            onClick={addDetail}
-            className="flex items-center gap-1 text-[10px] text-white px-2 py-1 rounded transition-colors border border-white/30 hover:bg-white/20"
-          >
-            <Plus className="w-3 h-3" /> Adaugă linie
+          <button onClick={addDetail} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'white', background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer' }}>
+            <Plus style={{ width: '12px', height: '12px' }} /> Adaugă linie
           </button>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-[11px] border-collapse">
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#f5f6fa' }}>
                 {['', 'Ord', 'Tip', 'Regim', 'Data', 'Ora', 'Status', 'Partener', 'Localitate', 'Firmă', 'Referință', 'Articol Marfă', ''].map((h, i) => (
-                  <th key={i} className="text-left px-2 py-2 text-[10px] font-bold uppercase tracking-wide text-gray-500 border-b border-gray-200 whitespace-nowrap">{h}</th>
+                  <th key={i} style={{ textAlign: 'left', padding: '8px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {order.detalii.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="text-center py-8 text-gray-400 text-[12px]">
+                  <td colSpan={13} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af', fontSize: '12px' }}>
                     Nicio linie de rută. Trage un PDF sau adaugă manual.
                   </td>
                 </tr>
               ) : (
                 order.detalii.map((d) => (
-                  <tr
-                    key={d.id}
-                    className="border-b border-gray-100 hover:brightness-95 transition-all"
-                    style={{ background: d.tip === 'I' ? '#f0faf4' : '#f0f4ff' }}
-                  >
-                    <td className="px-2 py-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ background: d.tip === 'I' ? '#16a34a' : BLUE }} />
+                  <tr key={d.id} style={{ borderBottom: '1px solid #f3f4f6', background: d.tip === 'I' ? '#f0faf4' : '#f0f4ff' }}>
+                    <td style={{ padding: '6px 8px' }}>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: d.tip === 'I' ? '#16a34a' : BLUE }} />
                     </td>
-                    <td className="px-2 py-1.5 text-gray-400 font-medium">{d.ord}</td>
-                    <td className="px-2 py-1.5">
-                      <select
-                        className="border border-gray-300 rounded px-1.5 py-0.5 text-[11px] bg-white focus:outline-none"
-                        value={d.tip}
-                        onChange={e => updateDetail(d.id, 'tip', e.target.value)}
-                      >
+                    <td style={{ padding: '6px 8px', color: '#9ca3af', fontWeight: '500' }}>{d.ord}</td>
+                    <td style={{ padding: '6px 8px' }}>
+                      <select style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', background: 'white' }}
+                        value={d.tip} onChange={e => updateDetail(d.id, 'tip', e.target.value)}>
                         <option value="I">I — Încărcare</option>
                         <option value="D">D — Descărcare</option>
                       </select>
                     </td>
-                    <td className="px-2 py-1.5">
-                      <input className="border border-gray-300 rounded px-1.5 py-0.5 text-[11px] w-16 bg-white focus:outline-none"
+                    <td style={{ padding: '6px 8px' }}>
+                      <input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '64px', background: 'white' }}
                         value={d.regim} onChange={e => updateDetail(d.id, 'regim', e.target.value)} />
                     </td>
-                    <td className="px-2 py-1.5">
-                      <input type="date" className="border border-gray-300 rounded px-1.5 py-0.5 text-[11px] bg-white focus:outline-none"
+                    <td style={{ padding: '6px 8px' }}>
+                      <input type="date" style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', background: 'white' }}
                         value={d.data} onChange={e => updateDetail(d.id, 'data', e.target.value)} />
                     </td>
-                    <td className="px-2 py-1.5">
-                      <input className="border border-gray-300 rounded px-1.5 py-0.5 text-[11px] w-20 bg-white focus:outline-none"
+                    <td style={{ padding: '6px 8px' }}>
+                      <input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '80px', background: 'white' }}
                         value={d.ora} onChange={e => updateDetail(d.id, 'ora', e.target.value)} />
                     </td>
-                    <td className="px-2 py-1.5">
-                      <input className="border border-gray-300 rounded px-1.5 py-0.5 text-[11px] w-20 bg-white focus:outline-none"
+                    <td style={{ padding: '6px 8px' }}>
+                      <input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '80px', background: 'white' }}
                         value={d.status} onChange={e => updateDetail(d.id, 'status', e.target.value)} />
                     </td>
                     {(['partener', 'localitate', 'firma', 'referinta', 'articolMarfa'] as const).map(field => (
-                      <td key={field} className="px-2 py-1.5">
-                        <input
-                          className="border border-gray-300 rounded px-1.5 py-0.5 text-[11px] w-28 bg-white focus:outline-none focus:border-blue-400"
+                      <td key={field} style={{ padding: '6px 8px' }}>
+                        <input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '112px', background: 'white' }}
                           value={d[field] as string}
-                          onChange={e => updateDetail(d.id, field, e.target.value)}
-                        />
+                          onChange={e => updateDetail(d.id, field, e.target.value)} />
                       </td>
                     ))}
-                    <td className="px-2 py-1.5">
-                      <button onClick={() => removeDetail(d.id)} className="text-red-400 hover:text-red-600 transition-colors">
-                        <Trash2 className="w-3.5 h-3.5" />
+                    <td style={{ padding: '6px 8px' }}>
+                      <button onClick={() => removeDetail(d.id)} style={{ color: '#f87171', background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}>
+                        <Trash2 style={{ width: '14px', height: '14px' }} />
                       </button>
                     </td>
                   </tr>
@@ -331,16 +280,13 @@ export default function App() {
       </div>
 
       {/* OBSERVAȚII */}
-      <div className="mx-5 mt-3 mb-12 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        <div
-          className="px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-white"
-          style={{ background: INDIGO, color: "white" }}
-        >
+      <div style={{ margin: '12px 20px 48px', background: 'white', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+        <div style={{ background: INDIGO, color: 'white', padding: '8px 16px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
           Observații
         </div>
-        <div className="p-4">
+        <div style={{ padding: '12px 16px' }}>
           <textarea
-            className="w-full border border-gray-300 rounded px-3 py-2 text-[12px] focus:outline-none focus:border-blue-400 resize-none bg-white"
+            style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: '4px', padding: '8px', fontSize: '12px', resize: 'none', outline: 'none', background: 'white', boxSizing: 'border-box' }}
             rows={3}
             value={order.observatii}
             onChange={e => set('observatii')(e.target.value)}
@@ -349,12 +295,8 @@ export default function App() {
       </div>
 
       {/* FOOTER */}
-      <footer
-        className="fixed bottom-0 left-0 right-0 text-[10px] px-5 py-1.5 flex items-center justify-between"
-        style={{ background: INDIGO, color: 'rgba(255,255,255,0.7)' }}
-      >
-        
-        <span style={{ color: MAGENTA }}>Created by Novasoft</span>
+      <footer style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: INDIGO, color: 'rgba(255,255,255,0.7)', fontSize: '10px', padding: '6px 20px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+        <span style={{ color: MAGENTA, fontWeight: '500' }}>Created by Novasoft</span>
       </footer>
     </div>
   )
