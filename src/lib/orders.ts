@@ -1,9 +1,9 @@
 import { supabase } from './supabase'
 import type { TransportOrder, TipPlanificare } from '../types/TransportOrder'
 
-export async function saveOrder(order: TransportOrder & { id?: string }): Promise<{ id: string } | null> {
+export async function saveOrder(order: TransportOrder & { id?: string }): Promise<{ id: string; numar: string } | null> {
   const payload = {
-    numar: order.numar,
+    numar: order.numar || null,
     data: order.data,
     client: order.client,
     contact: order.contact,
@@ -33,15 +33,15 @@ export async function saveOrder(order: TransportOrder & { id?: string }): Promis
       .from('transport_orders')
       .update(payload)
       .eq('id', order.id)
-      .select('id')
+      .select('id, numar')
       .single()
     if (error) { console.error('Update error:', error); return null }
     return data
   } else {
     const { data, error } = await supabase
       .from('transport_orders')
-      .insert(payload)
-      .select('id')
+      .insert({ ...payload, numar: null })
+      .select('id, numar')
       .single()
     if (error) { console.error('Insert error:', error); return null }
     return data
