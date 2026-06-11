@@ -89,7 +89,25 @@ FORMAT RASPUNS (DOAR JSON):
   console.log('Claude raw response:', content.substring(0, 200))
 
   try {
-    const parsed = JSON.parse(content)
+    const clean = content
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim()
+    const parsed = JSON.parse(clean)
+    return { pairs: parsed.pairs || {}, rawText: pdfText }
+  } catch {
+    const jsonMatch = content.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      try {
+        const parsed = JSON.parse(jsonMatch[0])
+        return { pairs: parsed.pairs || {}, rawText: pdfText }
+      } catch {
+        return { pairs: {}, rawText: pdfText }
+      }
+    }
+    return { pairs: {}, rawText: pdfText }
+  }
     return { pairs: parsed.pairs || {}, rawText: pdfText }
   } catch {
     const clean = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
