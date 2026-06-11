@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { Upload, FileText, Loader2 } from 'lucide-react'
 import * as pdfjsLib from 'pdfjs-dist'
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js`
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).toString()
 
 interface Props {
   onExtracted: (pairs: Record<string, string>, rawText: string) => void
