@@ -1,34 +1,41 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import PdfDropZone from './components/PdfDropZone'
-import { emptyOrder } from './types/TransportOrder'
-import type { TransportOrder, RouteDetail } from './types/TransportOrder'
+import { emptyOrder, generateNrComanda } from './types/TransportOrder'
+import type {
+  TransportOrder, RouteDetail, TipPlanificare,
+  PlanificarePropriu, PlanificareTerti, PlanificareIntercompany,
+  PlanificareSubcontractor, StatusEntry, FinanciarEntry
+} from './types/TransportOrder'
 import { mapTextractToOrder } from './utils/mapTextractToOrder'
 import { saveOrder, loadOrders, deleteOrder, dbToOrder } from './lib/orders'
-import { RefreshCw, Plus, Trash2, Save, ChevronDown, FileUp, TruckIcon, List, ArrowLeft, CheckCircle, XCircle } from 'lucide-react'
+import { RefreshCw, Plus, Trash2, Save, ChevronDown, FileUp, List, ArrowLeft, CheckCircle, XCircle, Printer } from 'lucide-react'
 
 const INDIGO = '#0B178B'
 const MAGENTA = '#DA387E'
 const BLUE = '#2980DA'
-
 const TVA_OPTIONS = ['0', '5', '9', '19', '21', '25']
 const MONEDA_OPTIONS = ['RON', 'EUR', 'USD', 'GBP', 'CHF', 'HUF', 'BGN', 'PLN']
-const TIP_PLANIFICARE_OPTIONS = ['Transport terti', 'Transport proprii', 'Subcontractori', 'Intercompany']
+const STATUS_OPTIONS = ['Nou', 'Confirmat', 'In tranzit', 'Livrat', 'Anulat', 'Incident']
 
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function Field({ label, value, onChange, readOnly = false }: { label: string; value: string; onChange?: (v: string) => void; readOnly?: boolean }) {
   return (
-    <div className="grid grid-cols-[120px_1fr] items-center gap-2 py-[3px]">
+    <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', alignItems: 'center', gap: '8px', padding: '3px 0' }}>
       <label style={{ fontSize: '11px', color: '#6b7280', textAlign: 'right' }}>{label}</label>
-      <input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 8px', fontSize: '12px', background: 'white', outline: 'none' }}
-        value={value} onChange={e => onChange(e.target.value)} />
+      <input
+        style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '3px 8px', fontSize: '12px', background: readOnly ? '#f9fafb' : 'white', outline: 'none' }}
+        value={value}
+        readOnly={readOnly}
+        onChange={e => onChange?.(e.target.value)}
+      />
     </div>
   )
 }
 
 function DateField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
-    <div className="grid grid-cols-[120px_1fr] items-center gap-2 py-[3px]">
+    <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', alignItems: 'center', gap: '8px', padding: '3px 0' }}>
       <label style={{ fontSize: '11px', color: '#6b7280', textAlign: 'right' }}>{label}</label>
-      <input type="date" style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 8px', fontSize: '12px', background: 'white', outline: 'none', width: '100%' }}
+      <input type="date" style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '3px 8px', fontSize: '12px', background: 'white', outline: 'none', width: '100%' }}
         value={value} onChange={e => onChange(e.target.value)} />
     </div>
   )
@@ -36,10 +43,10 @@ function DateField({ label, value, onChange }: { label: string; value: string; o
 
 function SelectField({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: string[] }) {
   return (
-    <div className="grid grid-cols-[120px_1fr] items-center gap-2 py-[3px]">
+    <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', alignItems: 'center', gap: '8px', padding: '3px 0' }}>
       <label style={{ fontSize: '11px', color: '#6b7280', textAlign: 'right' }}>{label}</label>
       <div style={{ position: 'relative' }}>
-        <select style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 24px 2px 8px', fontSize: '12px', background: 'white', outline: 'none', appearance: 'none' }}
+        <select style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: '4px', padding: '3px 24px 3px 8px', fontSize: '12px', background: 'white', outline: 'none', appearance: 'none' }}
           value={value} onChange={e => onChange(e.target.value)}>
           <option value="">—</option>
           {options.map(o => <option key={o} value={o}>{o}</option>)}
@@ -55,6 +62,450 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
     <div style={{ background: 'white', borderRadius: '6px', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
       <div style={{ background: INDIGO, color: 'white', padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{title}</div>
       <div style={{ padding: '10px 16px' }}>{children}</div>
+    </div>
+  )
+}
+
+// Componenta Planificare dinamică
+function PlanificarePanel({ tipPlanificare, planificare, onChange, onGenerate }: {
+  tipPlanificare: TipPlanificare
+  planificare: TransportOrder['planificare']
+  onChange: (p: TransportOrder['planificare']) => void
+  onGenerate: () => void
+}) {
+  if (!tipPlanificare) return null
+
+  const nrComanda = (planificare as { nrComanda?: string })?.nrComanda || ''
+
+  const setField = (field: string, value: string) => {
+    onChange({ ...(planificare as unknown as Record<string, unknown>), [field]: value } as unknown as TransportOrder['planificare'])
+  }
+
+  const f = (label: string, field: string) => (
+    <Field label={label} value={(planificare as unknown as Record<string, string>)?.[field] || ''} onChange={v => setField(field, v)} />
+  )
+
+  const s = (label: string, field: string, options: string[]) => (
+    <SelectField label={label} value={(planificare as unknown as Record<string, string>)?.[field] || ''} onChange={v => setField(field, v)} options={options} />
+  )
+
+  return (
+    <div style={{ background: 'white', borderRadius: '6px', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+      <div style={{ background: INDIGO, color: 'white', padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span>Planificare — {tipPlanificare}</span>
+        {!nrComanda && (
+          <button onClick={onGenerate}
+            style={{ fontSize: '10px', background: MAGENTA, color: 'white', border: 'none', padding: '3px 10px', borderRadius: '4px', cursor: 'pointer' }}>
+            + Generează nr.
+          </button>
+        )}
+      </div>
+      <div style={{ padding: '10px 16px' }}>
+        {nrComanda && (
+          <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', alignItems: 'center', gap: '8px', padding: '3px 0', marginBottom: '4px' }}>
+            <label style={{ fontSize: '11px', color: '#6b7280', textAlign: 'right' }}>Nr. planificare</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontWeight: 'bold', color: INDIGO, fontSize: '13px' }}>{nrComanda}</span>
+            </div>
+          </div>
+        )}
+
+        {tipPlanificare === 'Transport propriu' && (
+          <>
+            {f('Beneficiar', 'beneficiar')}
+            {f('Nr. înmatriculare', 'nrInmatriculare')}
+            {f('Semiremorci', 'semiremorca')}
+            {f('Șofer', 'sofer')}
+            {f('Echipaj', 'echipaj')}
+          </>
+        )}
+
+        {tipPlanificare === 'Transport terti' && (
+          <>
+            {f('Beneficiar', 'beneficiar')}
+            {f('Transportator', 'transportator')}
+            {f('Termen plată (zile)', 'termenPlata')}
+            {s('TVA (%)', 'tva', TVA_OPTIONS)}
+            {f('Tarif transport', 'tarifTransport')}
+            {s('Monedă', 'moneda', MONEDA_OPTIONS)}
+            {f('Nr. înmatriculare', 'nrInmatriculare')}
+            {f('Semiremorci', 'semiremorca')}
+            {f('Șofer', 'sofer')}
+          </>
+        )}
+
+        {tipPlanificare === 'Intercompany' && (
+          <>
+            {f('Beneficiar', 'beneficiar')}
+            {f('Transportator', 'transportator')}
+            {f('Tarif transport', 'tarifTransport')}
+            {f('Nr. înmatriculare', 'nrInmatriculare')}
+            {f('Semiremorci', 'semiremorca')}
+            {f('Șofer', 'sofer')}
+          </>
+        )}
+
+        {tipPlanificare === 'Subcontractor' && (
+          <>
+            {f('Beneficiar', 'beneficiar')}
+            {f('Transportator', 'transportator')}
+            {f('Termen plată (zile)', 'termenPlata')}
+            {f('Tarif transport', 'tarifTransport')}
+            {s('Monedă', 'moneda', MONEDA_OPTIONS)}
+            {f('Nr. înmatriculare', 'nrInmatriculare')}
+            {f('Semiremorci', 'semiremorca')}
+            {f('Șofer', 'sofer')}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Componenta Listare — format printabil
+function ListareTab({ order }: { order: TransportOrder }) {
+  const printRef = useRef<HTMLDivElement>(null)
+  const p = order.planificare as PlanificareTerti | null
+  const incarcare = order.detalii.find(d => d.tip === 'I')
+  const descarcare = order.detalii.find(d => d.tip === 'D')
+
+  const handlePrint = () => {
+    const content = printRef.current
+    if (!content) return
+    const win = window.open('', '_blank')
+    if (!win) return
+    win.document.write(`
+      <html><head><title>Comanda Transport ${p?.nrComanda || ''}</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 11px; margin: 20px; color: #000; }
+        h2 { text-align: center; font-size: 14px; margin-bottom: 4px; }
+        .subtitle { text-align: center; font-size: 12px; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+        td, th { border: 1px solid #000; padding: 5px 8px; font-size: 11px; }
+        th { background: #eee; font-weight: bold; text-align: left; }
+        .section { font-weight: bold; font-size: 12px; margin: 12px 0 4px; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 2px; }
+        .highlight { background: #fffbeb; }
+        .footer-row { display: flex; justify-content: space-between; margin-top: 40px; }
+        .sign-box { width: 45%; border-top: 1px solid #000; padding-top: 8px; text-align: center; font-size: 11px; }
+        .header-logo { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 2px solid #000; padding-bottom: 8px; }
+        .company-info { font-size: 10px; color: #333; }
+        .highlight-yellow { background: #fef9c3; border: 1px solid #fbbf24; padding: 6px 10px; margin: 8px 0; font-size: 10px; }
+      </style></head><body>
+      ${content.innerHTML}
+      </body></html>
+    `)
+    win.document.close()
+    win.print()
+  }
+
+  if (order.tipPlanificare !== 'Transport terti') {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>
+        Listarea este disponibilă doar pentru comenzile de tip <strong>Transport Terți</strong>.
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 0', marginBottom: '8px' }}>
+        <button onClick={handlePrint}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', background: INDIGO, color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>
+          <Printer style={{ width: '14px', height: '14px' }} /> Printează / Descarcă PDF
+        </button>
+      </div>
+
+      <div ref={printRef} style={{ background: 'white', padding: '24px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '11px' }}>
+        {/* HEADER */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', borderBottom: '2px solid #000', paddingBottom: '8px' }}>
+          <div>
+            <div style={{ fontWeight: 'bold', fontSize: '14px' }}>DIDI TRANS INTERNATIONAL SRL</div>
+            <div style={{ fontSize: '10px', color: '#555' }}>CUI: RO22396357 | J2007017045404</div>
+            <div style={{ fontSize: '10px', color: '#555' }}>office@diditrans.ro</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontWeight: 'bold', fontSize: '16px', textTransform: 'uppercase' }}>Comandă Transport</div>
+            <div style={{ fontSize: '13px', fontWeight: 'bold', color: INDIGO }}>NR. {p?.nrComanda || '—'} din {order.data || '—'}</div>
+          </div>
+          <div style={{ textAlign: 'right', fontSize: '10px', color: '#555' }}>
+            <div style={{ fontWeight: 'bold' }}>Dispecer: {order.responsabil || '—'}</div>
+          </div>
+        </div>
+
+        {/* TRANSPORTATOR + ORDONATOR */}
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '12px' }}>
+          <thead>
+            <tr>
+              <th style={{ border: '1px solid #000', padding: '5px 8px', background: '#eee', width: '50%' }}>DATE TRANSPORTATOR</th>
+              <th style={{ border: '1px solid #000', padding: '5px 8px', background: '#eee', width: '50%' }}>ORDONATOR CURSĂ / DATE FACTURARE</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '8px', verticalAlign: 'top' }}>
+                <div><strong>Nume:</strong> {p?.transportator || '—'}</div>
+              </td>
+              <td style={{ border: '1px solid #000', padding: '8px', verticalAlign: 'top' }}>
+                <div><strong>DIDI TRANS INTERNATIONAL SRL</strong></div>
+                <div>RO22396357 | J2007017045404</div>
+                <div>Str. Soldanului 7, București Sector 4</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* DETALII CURSĂ */}
+        <div style={{ fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', borderBottom: '2px solid #000', paddingBottom: '2px', marginBottom: '8px' }}>Detalii Cursă</div>
+
+        <div style={{ background: '#fef9c3', border: '1px solid #fbbf24', padding: '6px 10px', marginBottom: '8px', fontSize: '10px' }}>
+          OBLIGAȚIA TRANSPORTATORULUI ESTE SĂ TRANSMITĂ POZE LA CMR + AVIZE IMEDIAT DUPĂ ÎNCĂRCARE PENTRU A FI GENERAT COD UIT
+        </div>
+
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '12px' }}>
+          <tbody>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '5px 8px', background: '#f0faf4', fontWeight: 'bold', width: '120px' }}>1. Încărcare</td>
+              <td style={{ border: '1px solid #000', padding: '5px 8px' }}>
+                <strong>Data:</strong> {incarcare?.data || '—'} ora: {incarcare?.ora || '—'}<br />
+                <strong>Adresa:</strong> {incarcare?.partener || '—'} — {incarcare?.localitate || '—'}<br />
+                <strong>Marfă:</strong> {incarcare?.articolMarfa || '—'}
+              </td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '5px 8px', background: '#f0f4ff', fontWeight: 'bold' }}>2. Descărcare</td>
+              <td style={{ border: '1px solid #000', padding: '5px 8px' }}>
+                <strong>Data:</strong> {descarcare?.data || '—'} ora: {descarcare?.ora || '—'}<br />
+                <strong>Adresa:</strong> {descarcare?.partener || '—'} — {descarcare?.localitate || '—'}<br />
+                <strong>Marfă:</strong> {descarcare?.articolMarfa || '—'}
+              </td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '5px 8px', fontWeight: 'bold' }}>Auto nr.</td>
+              <td style={{ border: '1px solid #000', padding: '5px 8px' }}>{p?.nrInmatriculare || '—'} / {p?.semiremorca || '—'}</td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '5px 8px', fontWeight: 'bold' }}>Șofer</td>
+              <td style={{ border: '1px solid #000', padding: '5px 8px' }}>{p?.sofer || '—'}</td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '5px 8px', fontWeight: 'bold', background: '#fffbeb' }}>Preț</td>
+              <td style={{ border: '1px solid #000', padding: '5px 8px', fontWeight: 'bold', background: '#fffbeb' }}>
+                {p?.tarifTransport || order.tarifFaraTVA || '—'} {p?.moneda || order.moneda || 'EUR'} + TVA
+              </td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '5px 8px', fontWeight: 'bold' }}>Termen plată</td>
+              <td style={{ border: '1px solid #000', padding: '5px 8px' }}>
+                {p?.termenPlata || '30'} zile de la primirea documentelor în original (Factură, Aviz, CMR, Bon paleți, Comandă confirmată în original).
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* PREVEDERI GENERALE */}
+        <div style={{ fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', borderBottom: '2px solid #000', paddingBottom: '2px', marginBottom: '8px' }}>Prevederi Generale</div>
+        <div style={{ fontSize: '10px', lineHeight: '1.6', marginBottom: '12px' }}>
+          <p>1. Prezenta comandă ține loc de contract. Transportul se va efectua conform convenției CMR.</p>
+          <p>2. Transbordarea mărfii și subcontractarea fără acordul prealabil scris al DIDI TRANS INTERNATIONAL SRL este strict interzisă.</p>
+          <p>3. Dacă într-o oră de la primirea comenzii aceasta nu se refuză în scris, se consideră acceptată.</p>
+          <p>4. Transportatorul are obligația de a ne informa în scris privind orice întârziere și/sau abatere de la ruta obișnuită.</p>
+          <p>5. DIDI TRANS INTERNATIONAL SRL își rezervă dreptul de a anula comanda în orice moment, notificând cărăușul în scris.</p>
+        </div>
+
+        {/* SEMNĂTURI */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '40px' }}>
+          <div style={{ width: '45%', borderTop: '1px solid #000', paddingTop: '8px', textAlign: 'center' }}>
+            <div style={{ fontWeight: 'bold' }}>ORDONATOR CURSĂ</div>
+            <div>DIDI TRANS INTERNATIONAL SRL</div>
+          </div>
+          <div style={{ width: '45%', borderTop: '1px solid #000', paddingTop: '8px', textAlign: 'center' }}>
+            <div style={{ fontWeight: 'bold' }}>TRANSPORTATOR</div>
+            <div>{p?.transportator || '—'}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Componenta Statusuri
+function StatusuriTab({ statusuri, onChange }: { statusuri: StatusEntry[]; onChange: (s: StatusEntry[]) => void }) {
+  const addStatus = () => {
+    const now = new Date()
+    const newStatus: StatusEntry = {
+      id: Date.now().toString(),
+      status: '',
+      dataStatus: now.toISOString().slice(0, 10),
+      motiv: '',
+      observatii: '',
+      utilizatorIntroducere: 'admin',
+      dataIntroducere: now.toLocaleString('ro-RO'),
+    }
+    onChange([...statusuri, newStatus])
+  }
+
+  const updateStatus = (id: string, field: keyof StatusEntry, value: string) =>
+    onChange(statusuri.map(s => s.id === id ? { ...s, [field]: value } : s))
+
+  const removeStatus = (id: string) => onChange(statusuri.filter(s => s.id !== id))
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+        <button onClick={() => addStatus()}
+          style={{ display: 'flex', alignItems: 'center', gap: '4px', background: INDIGO, color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>
+          <Plus style={{ width: '12px', height: '12px' }} /> Adaugă status
+        </button>
+      </div>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+        <thead>
+          <tr style={{ background: '#f5f6fa' }}>
+            {['Status', 'Data status', 'Motiv', 'Observații', 'Utilizator', 'Data introducere', ''].map((h, i) => (
+              <th key={i} style={{ textAlign: 'left', padding: '8px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {statusuri.length === 0 ? (
+            <tr><td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>Niciun status înregistrat.</td></tr>
+          ) : statusuri.map((s, i) => (
+            <tr key={s.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa', borderBottom: '1px solid #f3f4f6' }}>
+              <td style={{ padding: '6px 8px' }}>
+                <div style={{ position: 'relative' }}>
+                  <select style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 20px 2px 6px', fontSize: '11px', background: 'white', appearance: 'none', width: '120px' }}
+                    value={s.status} onChange={e => updateStatus(s.id, 'status', e.target.value)}>
+                    <option value="">—</option>
+                    {STATUS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+              </td>
+              <td style={{ padding: '6px 8px' }}>
+                <input type="date" style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', background: 'white' }}
+                  value={s.dataStatus} onChange={e => updateStatus(s.id, 'dataStatus', e.target.value)} />
+              </td>
+              <td style={{ padding: '6px 8px' }}>
+                <input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '120px', background: 'white' }}
+                  value={s.motiv} onChange={e => updateStatus(s.id, 'motiv', e.target.value)} />
+              </td>
+              <td style={{ padding: '6px 8px' }}>
+                <input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '160px', background: 'white' }}
+                  value={s.observatii} onChange={e => updateStatus(s.id, 'observatii', e.target.value)} />
+              </td>
+              <td style={{ padding: '6px 8px', color: '#6b7280' }}>{s.utilizatorIntroducere}</td>
+              <td style={{ padding: '6px 8px', color: '#6b7280', whiteSpace: 'nowrap' }}>{s.dataIntroducere}</td>
+              <td style={{ padding: '6px 8px' }}>
+                <button onClick={() => removeStatus(s.id)} style={{ color: '#f87171', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  <Trash2 style={{ width: '14px', height: '14px' }} />
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// Componenta Financiar
+function FinanciarTab({ financiar, order, onChange }: { financiar: FinanciarEntry[]; order: TransportOrder; onChange: (f: FinanciarEntry[]) => void }) {
+  const addRow = () => {
+    const now = new Date()
+    const newRow: FinanciarEntry = {
+      id: Date.now().toString(),
+      tipTarifare: 'Transport intracomunit.',
+      um: 'Bucată',
+      cantitate: order.cantitate || '1',
+      pretUnitar: order.tarifFaraTVA || '',
+      valoare: order.tarifFaraTVA || '',
+      moneda: order.moneda || 'EUR',
+      client: order.client || '',
+      nrFactura: '',
+      dataFactura: now.toISOString().slice(0, 10),
+      validatFacturare: false,
+    }
+    onChange([...financiar, newRow])
+  }
+
+  const updateRow = (id: string, field: keyof FinanciarEntry, value: string | boolean) =>
+    onChange(financiar.map(f => f.id === id ? { ...f, [field]: value } : f))
+
+  const removeRow = (id: string) => onChange(financiar.filter(f => f.id !== id))
+
+  return (
+    <div>
+      <div style={{ marginBottom: '8px' }}>
+        <button onClick={addRow}
+          style={{ display: 'flex', alignItems: 'center', gap: '4px', background: INDIGO, color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>
+          <Plus style={{ width: '12px', height: '12px' }} /> Adaugă linie financiară
+        </button>
+      </div>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+          <thead>
+            <tr style={{ background: '#f5f6fa' }}>
+              {['Validat facturare', 'Tip tarifare', 'UM', 'Cantitate', 'Preț unitar', 'Valoare', 'Monedă', 'Client', 'Nr. factură', 'Data factură', ''].map((h, i) => (
+                <th key={i} style={{ textAlign: 'left', padding: '8px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', color: '#6b7280', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {financiar.length === 0 ? (
+              <tr><td colSpan={11} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>Nicio linie financiară.</td></tr>
+            ) : financiar.map((f, i) => (
+              <tr key={f.id} style={{ background: i % 2 === 0 ? '#f0faf4' : 'white', borderBottom: '1px solid #f3f4f6' }}>
+                <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                  <input type="checkbox" checked={f.validatFacturare}
+                    onChange={e => updateRow(f.id, 'validatFacturare', e.target.checked)} />
+                </td>
+                <td style={{ padding: '6px 8px' }}>
+                  <input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '140px', background: 'white' }}
+                    value={f.tipTarifare} onChange={e => updateRow(f.id, 'tipTarifare', e.target.value)} />
+                </td>
+                <td style={{ padding: '6px 8px' }}>
+                  <input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '80px', background: 'white' }}
+                    value={f.um} onChange={e => updateRow(f.id, 'um', e.target.value)} />
+                </td>
+                <td style={{ padding: '6px 8px' }}>
+                  <input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '60px', background: 'white' }}
+                    value={f.cantitate} onChange={e => updateRow(f.id, 'cantitate', e.target.value)} />
+                </td>
+                <td style={{ padding: '6px 8px' }}>
+                  <input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '80px', background: 'white' }}
+                    value={f.pretUnitar} onChange={e => updateRow(f.id, 'pretUnitar', e.target.value)} />
+                </td>
+                <td style={{ padding: '6px 8px', fontWeight: 'bold', color: MAGENTA }}>
+                  {f.valoare} {f.moneda}
+                </td>
+                <td style={{ padding: '6px 8px' }}>
+                  <div style={{ position: 'relative' }}>
+                    <select style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 20px 2px 6px', fontSize: '11px', background: 'white', appearance: 'none' }}
+                      value={f.moneda} onChange={e => updateRow(f.id, 'moneda', e.target.value)}>
+                      {MONEDA_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                </td>
+                <td style={{ padding: '6px 8px' }}>
+                  <input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '120px', background: 'white' }}
+                    value={f.client} onChange={e => updateRow(f.id, 'client', e.target.value)} />
+                </td>
+                <td style={{ padding: '6px 8px' }}>
+                  <input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '100px', background: 'white' }}
+                    value={f.nrFactura} onChange={e => updateRow(f.id, 'nrFactura', e.target.value)} />
+                </td>
+                <td style={{ padding: '6px 8px' }}>
+                  <input type="date" style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', background: 'white' }}
+                    value={f.dataFactura} onChange={e => updateRow(f.id, 'dataFactura', e.target.value)} />
+                </td>
+                <td style={{ padding: '6px 8px' }}>
+                  <button onClick={() => removeRow(f.id)} style={{ color: '#f87171', background: 'none', border: 'none', cursor: 'pointer' }}>
+                    <Trash2 style={{ width: '14px', height: '14px' }} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
@@ -88,6 +539,32 @@ export default function App() {
     setOrder(prev => ({ ...prev, tarifCuTVA: value, tarifFaraTVA: value ? faraTVA.toFixed(2) : '' }))
   }
 
+  const handleTipPlanificareChange = (tip: string) => {
+    const tipP = tip as TipPlanificare
+    let planificare: TransportOrder['planificare'] = null
+
+    if (tipP === 'Transport propriu') {
+      planificare = { tip: 'Transport propriu', nrComanda: '', beneficiar: '', nrInmatriculare: '', semiremorca: '', sofer: '', echipaj: '' } as PlanificarePropriu
+    } else if (tipP === 'Transport terti') {
+      planificare = { tip: 'Transport terti', nrComanda: '', beneficiar: '', transportator: '', termenPlata: '30', tva: '21', tarifTransport: '', moneda: 'EUR', nrInmatriculare: '', semiremorca: '', sofer: '' } as PlanificareTerti
+    } else if (tipP === 'Intercompany') {
+      planificare = { tip: 'Intercompany', nrComanda: '', beneficiar: '', transportator: '', tarifTransport: '', nrInmatriculare: '', semiremorca: '', sofer: '' } as PlanificareIntercompany
+    } else if (tipP === 'Subcontractor') {
+      planificare = { tip: 'Subcontractor', nrComanda: '', beneficiar: '', transportator: '', termenPlata: '30', tarifTransport: '', moneda: 'EUR', nrInmatriculare: '', semiremorca: '', sofer: '' } as PlanificareSubcontractor
+    }
+
+    setOrder(prev => ({ ...prev, tipPlanificare: tipP, planificare }))
+  }
+
+  const handleGenerateNr = () => {
+    if (!order.tipPlanificare) return
+    const nr = generateNrComanda(order.tipPlanificare)
+    setOrder(prev => ({
+      ...prev,
+      planificare: { ...(prev.planificare as object), nrComanda: nr } as TransportOrder['planificare']
+    }))
+  }
+
   const handleExtracted = (pairs: Record<string, string>, rawText: string) => {
     const mapped = mapTextractToOrder(pairs, rawText)
     setOrder(prev => ({ ...prev, ...mapped }))
@@ -98,8 +575,7 @@ export default function App() {
   const handleSave = async () => {
     setSaving(true)
     setSaveStatus('idle')
-    const orderToSave = orderId ? { ...order, id: orderId } : order
-    const result = await saveOrder(orderToSave as TransportOrder & { id?: string })
+    const result = await saveOrder(orderId ? { ...order, id: orderId } : order)
     if (result) {
       setOrderId(result.id)
       setSaveStatus('success')
@@ -123,7 +599,7 @@ export default function App() {
     setOrder(o)
     setOrderId(o.id)
     setView('form')
-    setExtracted(false)
+    setActiveTab('general')
   }
 
   const handleDeleteOrder = async (id: string) => {
@@ -138,6 +614,7 @@ export default function App() {
     setExtracted(false)
     setShowImport(true)
     setView('form')
+    setActiveTab('general')
   }
 
   const addDetail = () => {
@@ -172,29 +649,30 @@ export default function App() {
       {/* HEADER */}
       <header style={{ background: `linear-gradient(135deg, ${INDIGO} 0%, #1a2fa0 100%)`, height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <img src="https://nova-soft.ro/wp-content/uploads/2023/03/logo-synergo-alb.png" alt="Synergo" style={{ height: '32px' }}
-            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+          <img src="/synergo-logo.png" alt="Synergo"
+            style={{ height: '32px', objectFit: 'contain' }}
+            onError={e => {
+              const img = e.target as HTMLImageElement
+              img.style.display = 'none'
+              const span = document.createElement('span')
+              span.style.cssText = 'color:white;font-weight:bold;font-size:18px;letter-spacing:2px;'
+              span.textContent = '⚡ SYNERGO'
+              img.parentNode?.insertBefore(span, img)
+            }}
+          />
           <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.2)' }} />
           <div>
             <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.6)' }}>Rutier</div>
             <div style={{ fontSize: '13px', fontWeight: '600', color: 'white' }}>
-              {view === 'list' ? 'Listă Comenzi Rutiere' : <>Comandă Rutieră {order.numar && <span style={{ marginLeft: '8px', color: MAGENTA, fontWeight: 'bold' }}>· {order.numar}</span>}</>}
+              {view === 'list' ? 'Listă Comenzi' : <>Comandă Rutieră {order.numar && <span style={{ marginLeft: '8px', color: MAGENTA, fontWeight: 'bold' }}>· {order.numar}</span>}</>}
             </div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {saveStatus === 'success' && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#4ade80' }}>
-              <CheckCircle style={{ width: '14px', height: '14px' }} /> Salvat!
-            </span>
-          )}
-          {saveStatus === 'error' && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#f87171' }}>
-              <XCircle style={{ width: '14px', height: '14px' }} /> Eroare salvare
-            </span>
-          )}
+          {saveStatus === 'success' && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#4ade80' }}><CheckCircle style={{ width: '14px', height: '14px' }} /> Salvat!</span>}
+          {saveStatus === 'error' && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#f87171' }}><XCircle style={{ width: '14px', height: '14px' }} /> Eroare!</span>}
           {view === 'form' && (
-            <span style={{ fontSize: '10px', background: 'rgba(34,197,94,0.85)', color: 'white', padding: '4px 10px', borderRadius: '999px', fontWeight: '500' }}>
+            <span style={{ fontSize: '10px', background: 'rgba(34,197,94,0.85)', color: 'white', padding: '4px 10px', borderRadius: '999px' }}>
               ● {orderId ? 'Editare' : 'Înregistrare nouă'}
             </span>
           )}
@@ -235,10 +713,10 @@ export default function App() {
         {view === 'form' && <><span>›</span><span style={{ fontWeight: '500', color: INDIGO }}>{order.numar || 'Comandă nouă'}</span></>}
       </div>
 
-      {/* LISTA COMENZI */}
+      {/* LISTA */}
       {view === 'list' && (
-        <div style={{ margin: '16px 20px', background: 'white', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
-          <div style={{ background: INDIGO, color: 'white', padding: '10px 16px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ margin: '16px 20px', background: 'white', borderRadius: '8px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+          <div style={{ background: INDIGO, color: 'white', padding: '10px 16px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>Comenzi Rutiere</span>
             <span style={{ fontSize: '10px', background: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: '999px' }}>{orders.length} înregistrări</span>
           </div>
@@ -246,7 +724,7 @@ export default function App() {
             <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>Se încarcă...</div>
           ) : orders.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-              <div style={{ fontSize: '14px', marginBottom: '8px' }}>Nicio comandă salvată</div>
+              <div style={{ marginBottom: '8px' }}>Nicio comandă salvată</div>
               <button onClick={() => setView('form')} style={{ background: INDIGO, color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>
                 Creează prima comandă
               </button>
@@ -255,7 +733,7 @@ export default function App() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
               <thead>
                 <tr style={{ background: '#f5f6fa' }}>
-                  {['Număr', 'Data', 'Client', 'Transportator', 'Rută', 'Tarif', 'Monedă', ''].map((h, i) => (
+                  {['Număr', 'Data', 'Client', 'Tip planificare', 'Rută', 'Tarif', 'Monedă', ''].map((h, i) => (
                     <th key={i} style={{ textAlign: 'left', padding: '10px 12px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', color: '#6b7280', borderBottom: '1px solid #e5e7eb' }}>{h}</th>
                   ))}
                 </tr>
@@ -270,15 +748,16 @@ export default function App() {
                       <td style={{ padding: '10px 12px', fontWeight: 'bold', color: INDIGO }}>{o.numar || '—'}</td>
                       <td style={{ padding: '10px 12px', color: '#6b7280' }}>{o.data || '—'}</td>
                       <td style={{ padding: '10px 12px', fontWeight: '500' }}>{o.client || '—'}</td>
-                      <td style={{ padding: '10px 12px' }}>{o.transportator || '—'}</td>
-                      <td style={{ padding: '10px 12px', color: '#6b7280' }}>
-                        {inc?.localitate && dec?.localitate ? `${inc.localitate} → ${dec.localitate}` : '—'}
+                      <td style={{ padding: '10px 12px' }}>
+                        <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '999px', background: o.tipPlanificare === 'Transport terti' ? '#dbeafe' : o.tipPlanificare === 'Transport propriu' ? '#dcfce7' : '#fef9c3', color: '#374151' }}>
+                          {o.tipPlanificare || '—'}
+                        </span>
                       </td>
+                      <td style={{ padding: '10px 12px', color: '#6b7280' }}>{inc?.localitate && dec?.localitate ? `${inc.localitate} → ${dec.localitate}` : '—'}</td>
                       <td style={{ padding: '10px 12px', fontWeight: 'bold', color: MAGENTA }}>{o.tarifFaraTVA || '—'}</td>
                       <td style={{ padding: '10px 12px' }}>{o.moneda || '—'}</td>
                       <td style={{ padding: '10px 12px' }} onClick={e => e.stopPropagation()}>
-                        <button onClick={() => handleDeleteOrder(o.id)}
-                          style={{ color: '#f87171', background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}>
+                        <button onClick={() => handleDeleteOrder(o.id)} style={{ color: '#f87171', background: 'none', border: 'none', cursor: 'pointer' }}>
                           <Trash2 style={{ width: '14px', height: '14px' }} />
                         </button>
                       </td>
@@ -318,9 +797,13 @@ export default function App() {
           </div>
 
           <div style={{ margin: '0 20px', background: 'white', border: `1px solid ${INDIGO}`, borderRadius: '0 6px 6px 6px', padding: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+
             {activeTab === 'general' && (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '12px' }}>
+                {/* ANTET 3 + REZUMAT */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '12px', marginBottom: '12px' }}>
+
+                  {/* CLIENT */}
                   <Panel title="Client">
                     <DateField label="Data" value={order.data} onChange={set('data')} />
                     <Field label="Număr" value={order.numar} onChange={set('numar')} />
@@ -331,6 +814,7 @@ export default function App() {
                     <Field label="Responsabil" value={order.responsabil} onChange={set('responsabil')} />
                   </Panel>
 
+                  {/* TARIF */}
                   <Panel title="Tarif">
                     <SelectField label="Tip transport" value={order.tipTransport} onChange={set('tipTransport')} options={['FTL', 'LTL']} />
                     <Field label="Regim transport" value={order.regimTransport} onChange={set('regimTransport')} />
@@ -338,33 +822,40 @@ export default function App() {
                     <SelectField label="Monedă" value={order.moneda} onChange={set('moneda')} options={MONEDA_OPTIONS} />
                     <Field label="Termen (zile)" value={order.termen} onChange={set('termen')} />
                     <Field label="Cantitate" value={order.cantitate} onChange={set('cantitate')} />
-                    <div className="grid grid-cols-[120px_1fr] items-center gap-2 py-[3px]">
+                    <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', alignItems: 'center', gap: '8px', padding: '3px 0' }}>
                       <label style={{ fontSize: '11px', color: '#6b7280', textAlign: 'right' }}>Tarif fără TVA</label>
-                      <input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 8px', fontSize: '12px', background: '#fffbeb', outline: 'none' }}
+                      <input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '3px 8px', fontSize: '12px', background: '#fffbeb', outline: 'none' }}
                         value={order.tarifFaraTVA} onChange={e => handleTarifFaraTVA(e.target.value)} placeholder="0.00" />
                     </div>
-                    <div className="grid grid-cols-[120px_1fr] items-center gap-2 py-[3px]">
+                    <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', alignItems: 'center', gap: '8px', padding: '3px 0' }}>
                       <label style={{ fontSize: '11px', color: '#6b7280', textAlign: 'right' }}>Tarif cu TVA</label>
-                      <input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 8px', fontSize: '12px', background: '#fffbeb', outline: 'none' }}
+                      <input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '3px 8px', fontSize: '12px', background: '#fffbeb', outline: 'none' }}
                         value={order.tarifCuTVA} onChange={e => handleTarifCuTVA(e.target.value)} placeholder="0.00" />
                     </div>
                   </Panel>
 
-                  <Panel title="Planificare">
-                    <SelectField label="Tip planificare" value={order.tipPlanificare} onChange={set('tipPlanificare')} options={TIP_PLANIFICARE_OPTIONS} />
-                    <Field label="Cod intern (DID)" value={order.codInternTert} onChange={set('codInternTert')} />
-                    <Field label="Beneficiar" value={order.beneficiar} onChange={set('beneficiar')} />
-                    <Field label="Transportator" value={order.transportator} onChange={set('transportator')} />
-                    <Field label="Termen plată" value={order.termenPlata} onChange={set('termenPlata')} />
-                    <Field label="Tarif transport" value={order.tarifTransport} onChange={set('tarifTransport')} />
-                    <Field label="Nr. înmatriculare" value={order.nrInmatriculare} onChange={set('nrInmatriculare')} />
-                    <Field label="Semiremorci" value={order.semiremorca} onChange={set('semiremorca')} />
-                    <Field label="Șofer" value={order.sofer} onChange={set('sofer')} />
-                  </Panel>
+                  {/* PLANIFICARE DINAMICĂ */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ background: 'white', borderRadius: '6px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+                      <div style={{ background: INDIGO, color: 'white', padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Tip Planificare</div>
+                      <div style={{ padding: '10px 16px' }}>
+                        <SelectField label="Tip planificare" value={order.tipPlanificare} onChange={handleTipPlanificareChange}
+                          options={['Transport propriu', 'Transport terti', 'Intercompany', 'Subcontractor']} />
+                      </div>
+                    </div>
+                    {order.tipPlanificare && (
+                      <PlanificarePanel
+                        tipPlanificare={order.tipPlanificare}
+                        planificare={order.planificare}
+                        onChange={p => setOrder(prev => ({ ...prev, planificare: p }))}
+                        onGenerate={handleGenerateNr}
+                      />
+                    )}
+                  </div>
 
                   {/* REZUMAT */}
-                  <div style={{ width: '220px', background: '#f8faff', borderRadius: '6px', border: `1px solid ${INDIGO}30`, overflow: 'hidden' }}>
-                    <div style={{ background: INDIGO, color: 'white', padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Rezumat</div>
+                  <div style={{ width: '200px', background: '#f8faff', borderRadius: '6px', border: `1px solid ${INDIGO}30`, overflow: 'hidden' }}>
+                    <div style={{ background: INDIGO, color: 'white', padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>Rezumat</div>
                     <div style={{ padding: '10px 12px', fontSize: '11px' }}>
                       <div style={{ marginBottom: '8px' }}>
                         <div style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase', marginBottom: '2px' }}>Comandă</div>
@@ -375,37 +866,34 @@ export default function App() {
                         <div style={{ fontWeight: '500' }}>{order.client || '—'}</div>
                       </div>
                       <div style={{ marginBottom: '8px', padding: '6px', background: '#f0faf4', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#16a34a', fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}>
-                          <TruckIcon style={{ width: '12px', height: '12px' }} /> ÎNCĂRCARE
-                        </div>
-                        <div style={{ fontWeight: '500' }}>{incarcare?.partener || '—'}</div>
+                        <div style={{ color: '#16a34a', fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}>↑ ÎNCĂRCARE</div>
+                        <div style={{ fontWeight: '500', fontSize: '10px' }}>{incarcare?.partener || '—'}</div>
                         <div style={{ color: '#6b7280', fontSize: '10px' }}>{incarcare?.localitate || ''}</div>
                         <div style={{ color: '#6b7280', fontSize: '10px' }}>{incarcare?.data || ''}</div>
                       </div>
                       <div style={{ marginBottom: '8px', padding: '6px', background: '#f0f4ff', borderRadius: '4px', border: `1px solid ${BLUE}40` }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: BLUE, fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}>
-                          <TruckIcon style={{ width: '12px', height: '12px' }} /> DESCĂRCARE
-                        </div>
-                        <div style={{ fontWeight: '500' }}>{descarcare?.partener || '—'}</div>
+                        <div style={{ color: BLUE, fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}>↓ DESCĂRCARE</div>
+                        <div style={{ fontWeight: '500', fontSize: '10px' }}>{descarcare?.partener || '—'}</div>
                         <div style={{ color: '#6b7280', fontSize: '10px' }}>{descarcare?.localitate || ''}</div>
                         <div style={{ color: '#6b7280', fontSize: '10px' }}>{descarcare?.data || ''}</div>
                       </div>
                       <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '8px' }}>
                         <div style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase', marginBottom: '2px' }}>Tarif</div>
-                        <div style={{ fontWeight: 'bold', color: MAGENTA, fontSize: '14px' }}>{order.tarifFaraTVA ? `${order.tarifFaraTVA} ${order.moneda}` : '—'}</div>
+                        <div style={{ fontWeight: 'bold', color: MAGENTA, fontSize: '13px' }}>{order.tarifFaraTVA ? `${order.tarifFaraTVA} ${order.moneda}` : '—'}</div>
                         {order.tarifCuTVA && <div style={{ color: '#6b7280', fontSize: '10px' }}>Cu TVA: {order.tarifCuTVA} {order.moneda}</div>}
                       </div>
-                      <div style={{ marginTop: '8px' }}>
-                        <div style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase', marginBottom: '2px' }}>Transportator</div>
-                        <div style={{ fontWeight: '500', fontSize: '11px' }}>{order.transportator || '—'}</div>
-                        <div style={{ color: '#6b7280', fontSize: '10px' }}>{order.nrInmatriculare || ''}</div>
-                      </div>
+                      {(order.planificare as unknown as Record<string, string>)?.nrInmatriculare && (
+                        <div style={{ marginTop: '8px' }}>
+                          <div style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase', marginBottom: '2px' }}>Auto</div>
+                          <div style={{ fontWeight: '500', fontSize: '11px' }}>{(order.planificare as unknown as Record<string, string>).nrInmatriculare}</div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* DETALII RUTĂ */}
-                <div style={{ marginTop: '12px', background: 'white', borderRadius: '6px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+                <div style={{ background: 'white', borderRadius: '6px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
                   <div style={{ background: INDIGO, color: 'white', padding: '8px 16px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span>Detalii Rută</span>
                     <button onClick={addDetail} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'white', background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer' }}>
@@ -424,36 +912,40 @@ export default function App() {
                       <tbody>
                         {order.detalii.length === 0 ? (
                           <tr><td colSpan={13} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>Nicio linie de rută. Trage un PDF sau adaugă manual.</td></tr>
-                        ) : (
-                          order.detalii.map((d) => (
-                            <tr key={d.id} style={{ borderBottom: '1px solid #f3f4f6', background: d.tip === 'I' ? '#f0faf4' : '#f0f4ff' }}>
-                              <td style={{ padding: '6px 8px' }}><div style={{ width: '10px', height: '10px', borderRadius: '50%', background: d.tip === 'I' ? '#16a34a' : BLUE }} /></td>
-                              <td style={{ padding: '6px 8px', color: '#9ca3af' }}>{d.ord}</td>
-                              <td style={{ padding: '6px 8px' }}>
-                                <select style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', background: 'white' }}
-                                  value={d.tip} onChange={e => updateDetail(d.id, 'tip', e.target.value)}>
-                                  <option value="I">I — Încărcare</option>
-                                  <option value="D">D — Descărcare</option>
-                                </select>
-                              </td>
-                              <td style={{ padding: '6px 8px' }}><input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '64px', background: 'white' }} value={d.regim} onChange={e => updateDetail(d.id, 'regim', e.target.value)} /></td>
-                              <td style={{ padding: '6px 8px' }}><input type="date" style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', background: 'white' }} value={d.data} onChange={e => updateDetail(d.id, 'data', e.target.value)} /></td>
-                              <td style={{ padding: '6px 8px' }}><input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '80px', background: 'white' }} value={d.ora} onChange={e => updateDetail(d.id, 'ora', e.target.value)} /></td>
-                              <td style={{ padding: '6px 8px' }}><input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '80px', background: 'white' }} value={d.status} onChange={e => updateDetail(d.id, 'status', e.target.value)} /></td>
-                              {(['partener', 'localitate', 'firma', 'referinta', 'articolMarfa'] as const).map(field => (
-                                <td key={field} style={{ padding: '6px 8px' }}><input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '112px', background: 'white' }} value={d[field] as string} onChange={e => updateDetail(d.id, field, e.target.value)} /></td>
-                              ))}
-                              <td style={{ padding: '6px 8px' }}>
-                                <button onClick={() => removeDetail(d.id)} style={{ color: '#f87171', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 style={{ width: '14px', height: '14px' }} /></button>
-                              </td>
-                            </tr>
-                          ))
-                        )}
+                        ) : order.detalii.map((d) => (
+                          <tr key={d.id} style={{ borderBottom: '1px solid #f3f4f6', background: d.tip === 'I' ? '#f0faf4' : '#f0f4ff' }}>
+                            <td style={{ padding: '6px 8px' }}><div style={{ width: '10px', height: '10px', borderRadius: '50%', background: d.tip === 'I' ? '#16a34a' : BLUE }} /></td>
+                            <td style={{ padding: '6px 8px', color: '#9ca3af' }}>{d.ord}</td>
+                            <td style={{ padding: '6px 8px' }}>
+                              <select style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', background: 'white' }}
+                                value={d.tip} onChange={e => updateDetail(d.id, 'tip', e.target.value)}>
+                                <option value="I">I — Încărcare</option>
+                                <option value="D">D — Descărcare</option>
+                              </select>
+                            </td>
+                            <td style={{ padding: '6px 8px' }}><input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '60px', background: 'white' }} value={d.regim} onChange={e => updateDetail(d.id, 'regim', e.target.value)} /></td>
+                            <td style={{ padding: '6px 8px' }}><input type="date" style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', background: 'white' }} value={d.data} onChange={e => updateDetail(d.id, 'data', e.target.value)} /></td>
+                            <td style={{ padding: '6px 8px' }}><input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '80px', background: 'white' }} value={d.ora} onChange={e => updateDetail(d.id, 'ora', e.target.value)} /></td>
+                            <td style={{ padding: '6px 8px' }}><input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '80px', background: 'white' }} value={d.status} onChange={e => updateDetail(d.id, 'status', e.target.value)} /></td>
+                            {(['partener', 'localitate', 'firma', 'referinta', 'articolMarfa'] as const).map(field => (
+                              <td key={field} style={{ padding: '6px 8px' }}><input style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', width: '110px', background: 'white' }} value={d[field] as string} onChange={e => updateDetail(d.id, field, e.target.value)} /></td>
+                            ))}
+                            <td style={{ padding: '6px 8px' }}><button onClick={() => removeDetail(d.id)} style={{ color: '#f87171', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 style={{ width: '14px', height: '14px' }} /></button></td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
                 </div>
               </>
+            )}
+
+            {activeTab === 'financiar' && (
+              <FinanciarTab
+                financiar={order.financiar}
+                order={order}
+                onChange={f => setOrder(prev => ({ ...prev, financiar: f }))}
+              />
             )}
 
             {activeTab === 'observatii' && (
@@ -464,17 +956,33 @@ export default function App() {
               </div>
             )}
 
-            {(activeTab === 'financiar' || activeTab === 'listare' || activeTab === 'statusuri') && (
-              <div style={{ padding: '40px', color: '#9ca3af', textAlign: 'center', fontSize: '12px' }}>
-                Secțiunea <strong>{tabs.find(t => t.id === activeTab)?.label}</strong> — în dezvoltare
-              </div>
+            {activeTab === 'listare' && (
+              <ListareTab order={order} />
+            )}
+
+            {activeTab === 'statusuri' && (
+              <StatusuriTab
+                statusuri={order.statusuri}
+                onChange={s => setOrder(prev => ({ ...prev, statusuri: s }))}
+              />
             )}
           </div>
         </>
       )}
 
-      <footer style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: INDIGO, color: 'rgba(255,255,255,0.7)', fontSize: '10px', padding: '6px 20px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-        <span style={{ color: MAGENTA, fontWeight: '500' }}>Created by Novasoft</span>
+      {/* FOOTER */}
+      <footer style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: INDIGO, color: 'rgba(255,255,255,0.7)', fontSize: '10px', padding: '4px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ color: 'rgba(255,255,255,0.5)' }}>Synergo Transport Order</span>
+        <img src="/novasoft-logo.png" alt="Novasoft" style={{ height: '20px', objectFit: 'contain' }}
+          onError={e => {
+            const img = e.target as HTMLImageElement
+            img.style.display = 'none'
+            const span = document.createElement('span')
+            span.style.cssText = 'color:#DA387E;font-weight:bold;font-size:10px;'
+            span.textContent = 'Novasoft Digital Innovators'
+            img.parentNode?.insertBefore(span, img)
+          }}
+        />
       </footer>
       <div style={{ height: '32px' }} />
     </div>

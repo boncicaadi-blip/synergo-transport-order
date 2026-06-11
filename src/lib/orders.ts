@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { TransportOrder } from '../types/TransportOrder'
+import type { TransportOrder, TipPlanificare } from '../types/TransportOrder'
 
 export async function saveOrder(order: TransportOrder & { id?: string }): Promise<{ id: string } | null> {
   const payload = {
@@ -21,16 +21,10 @@ export async function saveOrder(order: TransportOrder & { id?: string }): Promis
     tarif_cu_tva: order.tarifCuTVA,
     parcurs_km: order.parcursKm,
     tip_planificare: order.tipPlanificare,
-    cod_intern_tert: order.codInternTert,
-    beneficiar: order.beneficiar,
-    transportator: order.transportator,
-    termen_plata: order.termenPlata,
-    tarif_transport: order.tarifTransport,
-    moneda_transport: order.monedaTransport,
-    nr_inmatriculare: order.nrInmatriculare,
-    semiremorca: order.semiremorca,
-    sofer: order.sofer,
+    planificare: order.planificare,
     detalii: order.detalii,
+    statusuri: order.statusuri,
+    financiar: order.financiar,
     updated_at: new Date().toISOString(),
   }
 
@@ -92,16 +86,10 @@ export function dbToOrder(row: Record<string, unknown>): TransportOrder & { id: 
     tarifFaraTVA: (row.tarif_fara_tva as string) || '',
     tarifCuTVA: (row.tarif_cu_tva as string) || '',
     parcursKm: (row.parcurs_km as string) || '',
-    tipPlanificare: (row.tip_planificare as string) || '',
-    codInternTert: (row.cod_intern_tert as string) || '',
-    beneficiar: (row.beneficiar as string) || '',
-    transportator: (row.transportator as string) || '',
-    termenPlata: (row.termen_plata as string) || '30',
-    tarifTransport: (row.tarif_transport as string) || '',
-    monedaTransport: (row.moneda_transport as string) || 'EUR',
-    nrInmatriculare: (row.nr_inmatriculare as string) || '',
-    semiremorca: (row.semiremorca as string) || '',
-    sofer: (row.sofer as string) || '',
+    tipPlanificare: ((row.tip_planificare as string) || '') as TipPlanificare,
+    planificare: (row.planificare as never) || null,
     detalii: (row.detalii as []) || [],
+    statusuri: (row.statusuri as []) || [],
+    financiar: (row.financiar as []) || [],
   }
 }

@@ -1,5 +1,6 @@
-import type { TransportOrder, RouteDetail } from '../types/TransportOrder'
+import type { TransportOrder } from '../types/TransportOrder'
 import { emptyOrder } from '../types/TransportOrder'
+import type { RouteDetail } from '../types/TransportOrder'
 
 const FIELD_MAP: Record<string, keyof TransportOrder> = {
   'expeditor': 'client',
@@ -10,20 +11,10 @@ const FIELD_MAP: Record<string, keyof TransportOrder> = {
   'numar comanda': 'numar',
   'data': 'data',
   'date': 'data',
-  'transportator': 'transportator',
-  'carrier': 'transportator',
-  'numar inmatriculare': 'nrInmatriculare',
-  'vehicle registration': 'nrInmatriculare',
-  'semiremorca': 'semiremorca',
-  'trailer': 'semiremorca',
-  'sofer': 'sofer',
-  'driver': 'sofer',
-  'tarif': 'tarifFaraTVA',
-  'freight': 'tarifFaraTVA',
-  'moneda': 'moneda',
-  'currency': 'moneda',
   'referinta': 'referinta',
   'reference': 'referinta',
+  'moneda': 'moneda',
+  'currency': 'moneda',
 }
 
 export function mapTextractToOrder(
@@ -41,7 +32,7 @@ export function mapTextractToOrder(
   }
 
   if (!order.numar) {
-    const m = rawText.match(/\b(C\d{6,}|CMD[-\s]?\d+|NR\.?\s*\d+)\b/i)
+    const m = rawText.match(/\b(NVS-[PTIS]-\d+|C\d{6,}|CMD[-\s]?\d+)\b/i)
     if (m) order.numar = m[1]
   }
 
@@ -58,11 +49,7 @@ export function mapTextractToOrder(
     }
   }
 
-  if (!order.nrInmatriculare) {
-    const m = rawText.match(/\b([A-Z]{1,2}\s?\d{2,3}\s?[A-Z]{2,3})\b/)
-    if (m) order.nrInmatriculare = m[1]
-  }
-
+  // Extrage detalii rută din text
   const detail: RouteDetail = {
     id: '1',
     ord: 1,
@@ -72,14 +59,34 @@ export function mapTextractToOrder(
     data: order.data,
     ora: '12:00:00',
     status: '',
-    partener: order.client,
+    partener: '',
     localitate: '',
     firma: order.client,
     referinta: order.referinta,
     articolMarfa: '',
   }
 
+  // Încearcă să extragă nr. înmatriculare
+  const nrAuto = rawText.match(/\b([A-Z]{1,2}\s?\d{2,3}\s?[A-Z]{2,3})\b/)
+  
   order.detalii = [detail]
+
+  // Dacă găsim nr. auto, îl punem în planificare
+  if (nrAuto && order.tipPlanificare === 'Transport terti') {
+    order.planificare = {
+      tip: 'Transport terti',
+      nrComanda: '',
+      beneficiar: '',
+      transportator: '',
+      termenPlata: '30',
+      tva: '21',
+      tarifTransport: order.tarifFaraTVA || '',
+      moneda: order.moneda || 'EUR',
+      nrInmatriculare: nrAuto[1],
+      semiremorca: '',
+      sofer: '',
+    }
+  }
 
   return order
 }
