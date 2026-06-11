@@ -173,7 +173,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (textractErr: unknown) {
       const errMessage = textractErr instanceof Error ? textractErr.message : String(textractErr)
       const isUnavailable = 
-        errMessage.includes('SubscriptionRequiredException') ||
+        errMessage.includes('SubscriptionRequiredException') || errMessage.includes('subscription') ||
         errMessage.includes('AccessDeniedException') ||
         errMessage.includes('ENOTFOUND') ||
         errMessage.includes('UnrecognizedClientException')
