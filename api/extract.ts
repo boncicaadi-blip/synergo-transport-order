@@ -57,74 +57,24 @@ async function extractWithTextract(buffer: Buffer): Promise<{ pairs: Record<stri
 
 async function extractWithClaude(base64: string, mimeType: string): Promise<{ pairs: Record<string, string>; rawText: string }> {
   const isImage = mimeType.startsWith('image/')
-  
-  let messageContent: unknown[]
-  
-  if (isImage) {
-    messageContent = [
-      {
-        type: 'image',
-        source: { type: 'base64', media_type: mimeType, data: base64 },
-      },
-      {
-        type: 'text',
-        text: `Analizează acest document de transport și extrage câmpurile. Returnează DOAR JSON valid, fără text suplimentar:
-{
-  "pairs": {
-    "client": "",
-    "numar comanda": "",
-    "data": "",
-    "transportator": "",
-    "numar inmatriculare": "",
-    "semiremorca": "",
-    "sofer": "",
-    "tarif": "",
-    "moneda": "",
-    "referinta": "",
-    "expeditor": "",
-    "destinatar": "",
-    "localitate incarcare": "",
-    "localitate descarcare": "",
-    "marfa": "",
-    "termen plata": ""
-  },
-  "rawText": "tot textul din document"
-}`,
-      },
-    ]
-  } else {
-    messageContent = [
-      {
-        type: 'document',
-        source: { type: 'base64', media_type: 'application/pdf', data: base64 },
-      },
-      {
-        type: 'text',
-        text: `Analizează acest document de transport și extrage câmpurile. Returnează DOAR JSON valid, fără text suplimentar:
-{
-  "pairs": {
-    "client": "",
-    "numar comanda": "",
-    "data": "",
-    "transportator": "",
-    "numar inmatriculare": "",
-    "semiremorca": "",
-    "sofer": "",
-    "tarif": "",
-    "moneda": "",
-    "referinta": "",
-    "expeditor": "",
-    "destinatar": "",
-    "localitate incarcare": "",
-    "localitate descarcare": "",
-    "marfa": "",
-    "termen plata": ""
-  },
-  "rawText": "tot textul din document"
-}`,
-      },
-    ]
-  }
+
+  const messageContent = isImage
+    ? [
+        { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
+        {
+          type: 'text',
+          text: `Analizează acest document de transport. Returnează DOAR un obiect JSON valid, fara backticks, fara text inainte sau dupa:
+{"pairs":{"client":"","numar comanda":"","data":"","transportator":"","numar inmatriculare":"","semiremorca":"","sofer":"","tarif":"","moneda":"","referinta":"","expeditor":"","destinatar":"","localitate incarcare":"","localitate descarcare":"","marfa":"","termen plata":""},"rawText":"tot textul din document"}`,
+        },
+      ]
+    : [
+        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
+        {
+          type: 'text',
+          text: `Analizează acest document de transport. Returnează DOAR un obiect JSON valid, fara backticks, fara text inainte sau dupa:
+{"pairs":{"client":"","numar comanda":"","data":"","transportator":"","numar inmatriculare":"","semiremorca":"","sofer":"","tarif":"","moneda":"","referinta":"","expeditor":"","destinatar":"","localitate incarcare":"","localitate descarcare":"","marfa":"","termen plata":""},"rawText":"tot textul din document"}`,
+        },
+      ]
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -135,7 +85,7 @@ async function extractWithClaude(base64: string, mimeType: string): Promise<{ pa
     },
     body: JSON.stringify({
       model: 'claude-opus-4-5',
-      max_tokens: 1024,
+      max_tokens: 2048,
       messages: [{ role: 'user', content: messageContent }],
     }),
   })
@@ -144,15 +94,36 @@ async function extractWithClaude(base64: string, mimeType: string): Promise<{ pa
     const err = await response.text()
     throw new Error(`Claude API error: ${err}`)
   }
-  
+
   const data = await response.json()
   const content = data.content[0].text
-  
+
+  // Încearcă parsare directă
   try {
-    const clean = content.replace(/```json|```/g, '').trim()
-    return JSON.parse(clean)
+    const parsed = JSON.parse(content)
+    return { pairs: parsed.pairs || {}, rawText: parsed.rawText || content }
   } catch {
-    return { pairs: {}, rawText: content }
+    // Curăță backticks și încearcă din nou
+    try {
+      const clean = content
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim()
+      const parsed = JSON.parse(clean)
+      return { pairs: parsed.pairs || {}, rawText: parsed.rawText || content }
+    } catch {
+      // Extrage JSON din mijlocul textului
+      const jsonMatch = content.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[0])
+          return { pairs: parsed.pairs || {}, rawText: parsed.rawText || content }
+        } catch {
+          return { pairs: {}, rawText: content }
+        }
+      }
+      return { pairs: {}, rawText: content }
+    }
   }
 }
 
@@ -172,8 +143,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ ...result, source: 'textract' })
     } catch (textractErr: unknown) {
       const errMessage = textractErr instanceof Error ? textractErr.message : String(textractErr)
-      const isUnavailable = 
-        errMessage.includes('SubscriptionRequiredException') || errMessage.includes('subscription') ||
+      const isUnavailable =
+        errMessage.includes('SubscriptionRequiredException') ||
+        errMessage.includes('subscription') ||
         errMessage.includes('AccessDeniedException') ||
         errMessage.includes('ENOTFOUND') ||
         errMessage.includes('UnrecognizedClientException')
@@ -181,7 +153,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (isUnavailable) {
         console.log('Textract unavailable, using Claude...')
         const result = await extractWithClaude(base64, mimeType || 'application/pdf')
-        console.log('Claude success:', JSON.stringify(result).substring(0, 500))
+        console.log('Claude success:', JSON.stringify(result.pairs).substring(0, 300))
+        return res.status(200).json({ ...result, source: 'claude' })
       }
 
       throw textractErr
