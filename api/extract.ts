@@ -55,26 +55,14 @@ async function extractWithTextract(buffer: Buffer): Promise<{ pairs: Record<stri
   return { pairs, rawText }
 }
 
-async function extractWithClaude(base64: string, mimeType: string): Promise<{ pairs: Record<string, string>; rawText: string }> {
-  const isImage = mimeType.startsWith('image/')
+async function extractWithClaude(pdfText: string): Promise<{ pairs: Record<string, string>; rawText: string }> {
+  const prompt = `Analizează acest text dintr-un document de transport si extrage campurile. Returneaza DOAR JSON valid fara backticks fara text inainte sau dupa. Campurile goale lasa ca string gol.
 
-  const messageContent = isImage
-    ? [
-        { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
-        {
-          type: 'text',
-          text: `Analizează acest document de transport. Returnează DOAR un obiect JSON valid, fara backticks, fara text inainte sau dupa:
-{"pairs":{"client":"","numar comanda":"","data":"","transportator":"","numar inmatriculare":"","semiremorca":"","sofer":"","tarif":"","moneda":"","referinta":"","expeditor":"","destinatar":"","localitate incarcare":"","localitate descarcare":"","marfa":"","termen plata":""},"rawText":"tot textul din document"}`,
-        },
-      ]
-    : [
-        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
-        {
-          type: 'text',
-          text: `Analizează acest document de transport. Returnează DOAR un obiect JSON valid, fara backticks, fara text inainte sau dupa:
-{"pairs":{"client":"","numar comanda":"","data":"","transportator":"","numar inmatriculare":"","semiremorca":"","sofer":"","tarif":"","moneda":"","referinta":"","expeditor":"","destinatar":"","localitate incarcare":"","localitate descarcare":"","marfa":"","termen plata":""},"rawText":"tot textul din document"}`,
-        },
-      ]
+TEXT DOCUMENT:
+${pdfText.substring(0, 3000)}
+
+FORMAT RASPUNS (DOAR JSON):
+{"pairs":{"client":"","numar comanda":"","data":"","transportator":"","numar inmatriculare":"","semiremorca":"","sofer":"","tarif":"","moneda":"","referinta":"","expeditor":"","destinatar":"","localitate incarcare":"","localitate descarcare":"","marfa":"","termen plata":""},"rawText":""}`
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -86,7 +74,7 @@ async function extractWithClaude(base64: string, mimeType: string): Promise<{ pa
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 512,
-      messages: [{ role: 'user', content: messageContent }],
+      messages: [{ role: 'user', content: prompt }],
     }),
   })
 
@@ -96,33 +84,29 @@ async function extractWithClaude(base64: string, mimeType: string): Promise<{ pa
   }
 
   const data = await response.json()
-  const content = data.content[0].text
+  const content = data.content[0].text.trim()
 
-  // Încearcă parsare directă
+  console.log('Claude raw response:', content.substring(0, 200))
+
   try {
     const parsed = JSON.parse(content)
-    return { pairs: parsed.pairs || {}, rawText: parsed.rawText || content }
+    return { pairs: parsed.pairs || {}, rawText: pdfText }
   } catch {
-    // Curăță backticks și încearcă din nou
+    const clean = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
     try {
-      const clean = content
-        .replace(/```json\n?/g, '')
-        .replace(/```\n?/g, '')
-        .trim()
       const parsed = JSON.parse(clean)
-      return { pairs: parsed.pairs || {}, rawText: parsed.rawText || content }
+      return { pairs: parsed.pairs || {}, rawText: pdfText }
     } catch {
-      // Extrage JSON din mijlocul textului
       const jsonMatch = content.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         try {
           const parsed = JSON.parse(jsonMatch[0])
-          return { pairs: parsed.pairs || {}, rawText: parsed.rawText || content }
+          return { pairs: parsed.pairs || {}, rawText: pdfText }
         } catch {
-          return { pairs: {}, rawText: content }
+          return { pairs: {}, rawText: pdfText }
         }
       }
-      return { pairs: {}, rawText: content }
+      return { pairs: {}, rawText: pdfText }
     }
   }
 }
@@ -131,7 +115,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const { base64, mimeType } = req.body as { base64: string; mimeType: string }
+    const { base64, mimeType, pdfText } = req.body as { base64: string; mimeType: string; pdfText?: string }
     if (!base64) return res.status(400).json({ error: 'Missing base64 content' })
 
     const buffer = Buffer.from(base64, 'base64')
@@ -151,9 +135,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         errMessage.includes('UnrecognizedClientException')
 
       if (isUnavailable) {
-        console.log('Textract unavailable, using Claude...')
-        const result = await extractWithClaude(base64, mimeType || 'application/pdf')
-        console.log('Claude success:', JSON.stringify(result.pairs).substring(0, 300))
+        console.log('Textract unavailable, using Claude with text...')
+
+        if (!pdfText || pdfText.trim().length < 10) {
+          return res.status(200).json({
+            pairs: {},
+            rawText: '',
+            source: 'none',
+            error: 'PDF text not available'
+          })
+        }
+
+        const result = await extractWithClaude(pdfText)
+        console.log('Claude success:', JSON.stringify(result.pairs).substring(0, 200))
         return res.status(200).json({ ...result, source: 'claude' })
       }
 
