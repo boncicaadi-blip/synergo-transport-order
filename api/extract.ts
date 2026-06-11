@@ -181,8 +181,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (isUnavailable) {
         console.log('Textract unavailable, using Claude...')
         const result = await extractWithClaude(base64, mimeType || 'application/pdf')
-        console.log('Claude success')
-        return res.status(200).json({ ...result, source: 'claude' })
+        console.log('Claude success:', JSON.stringify(result).substring(0, 500))
       }
 
       throw textractErr
