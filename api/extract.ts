@@ -85,7 +85,7 @@ async function extractWithClaude(base64: string, mimeType: string): Promise<{ pa
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2048,
+      max_tokens: 512,
       messages: [{ role: 'user', content: messageContent }],
     }),
   })

@@ -1,7 +1,9 @@
+cat > vercel.json << 'EOF'
 {
   "functions": {
     "api/extract.ts": {
-      "maxDuration": 30
+      "maxDuration": 60
     }
   }
 }
+EOF
