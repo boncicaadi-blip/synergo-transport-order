@@ -1,4 +1,3 @@
-cat > api/extract.ts << 'EOF'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import {
   TextractClient,
@@ -57,26 +56,19 @@ async function extractWithTextract(buffer: Buffer): Promise<{ pairs: Record<stri
 }
 
 async function extractWithClaude(base64: string, mimeType: string): Promise<{ pairs: Record<string, string>; rawText: string }> {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY!,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-opus-4-5',
-      max_tokens: 1024,
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: { type: 'base64', media_type: mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: base64 },
-          },
-          {
-            type: 'text',
-            text: `Analizează acest document de transport și extrage câmpurile. Returnează DOAR JSON valid, fără text suplimentar:
+  const isImage = mimeType.startsWith('image/')
+  
+  let messageContent: unknown[]
+  
+  if (isImage) {
+    messageContent = [
+      {
+        type: 'image',
+        source: { type: 'base64', media_type: mimeType, data: base64 },
+      },
+      {
+        type: 'text',
+        text: `Analizează acest document de transport și extrage câmpurile. Returnează DOAR JSON valid, fără text suplimentar:
 {
   "pairs": {
     "client": "",
@@ -98,17 +90,67 @@ async function extractWithClaude(base64: string, mimeType: string): Promise<{ pa
   },
   "rawText": "tot textul din document"
 }`,
-          },
-        ],
-      }],
+      },
+    ]
+  } else {
+    messageContent = [
+      {
+        type: 'document',
+        source: { type: 'base64', media_type: 'application/pdf', data: base64 },
+      },
+      {
+        type: 'text',
+        text: `Analizează acest document de transport și extrage câmpurile. Returnează DOAR JSON valid, fără text suplimentar:
+{
+  "pairs": {
+    "client": "",
+    "numar comanda": "",
+    "data": "",
+    "transportator": "",
+    "numar inmatriculare": "",
+    "semiremorca": "",
+    "sofer": "",
+    "tarif": "",
+    "moneda": "",
+    "referinta": "",
+    "expeditor": "",
+    "destinatar": "",
+    "localitate incarcare": "",
+    "localitate descarcare": "",
+    "marfa": "",
+    "termen plata": ""
+  },
+  "rawText": "tot textul din document"
+}`,
+      },
+    ]
+  }
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY!,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-opus-4-5',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: messageContent }],
     }),
   })
 
-  if (!response.ok) throw new Error(`Claude API error: ${response.status}`)
+  if (!response.ok) {
+    const err = await response.text()
+    throw new Error(`Claude API error: ${err}`)
+  }
+  
   const data = await response.json()
   const content = data.content[0].text
+  
   try {
-    return JSON.parse(content)
+    const clean = content.replace(/```json|```/g, '').trim()
+    return JSON.parse(clean)
   } catch {
     return { pairs: {}, rawText: content }
   }
@@ -123,7 +165,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const buffer = Buffer.from(base64, 'base64')
 
-    // Încearcă Textract primul — dacă eșuează cu SubscriptionRequiredException, fallback la Claude
     try {
       console.log('Trying Textract...')
       const result = await extractWithTextract(buffer)
@@ -131,13 +172,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ ...result, source: 'textract' })
     } catch (textractErr: unknown) {
       const errMessage = textractErr instanceof Error ? textractErr.message : String(textractErr)
-      const isSubscriptionError = errMessage.includes('SubscriptionRequiredException') ||
+      const isUnavailable = 
+        errMessage.includes('SubscriptionRequiredException') ||
         errMessage.includes('AccessDeniedException') ||
-        errMessage.includes('ENOTFOUND')
+        errMessage.includes('ENOTFOUND') ||
+        errMessage.includes('UnrecognizedClientException')
 
-      if (isSubscriptionError) {
-        console.log('Textract not available, falling back to Claude...')
-        const result = await extractWithClaude(base64, mimeType || 'image/jpeg')
+      if (isUnavailable) {
+        console.log('Textract unavailable, using Claude...')
+        const result = await extractWithClaude(base64, mimeType || 'application/pdf')
         console.log('Claude success')
         return res.status(200).json({ ...result, source: 'claude' })
       }
@@ -149,4 +192,3 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(500).json({ error: 'Extraction failed' })
   }
 }
-EOF
