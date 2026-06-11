@@ -498,7 +498,7 @@ export default function App() {
   // Ctrl+S shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
         e.preventDefault()
         if (view === 'form') handleSave()
       }
