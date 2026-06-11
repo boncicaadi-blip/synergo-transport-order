@@ -20,17 +20,14 @@ async function extractWithTextract(buffer: Buffer): Promise<{ pairs: Record<stri
   })
   const response = await textractClient.send(command)
   const blocks: Block[] = response.Blocks ?? []
-
   const keyMap = new Map<string, Block>()
   const valueMap = new Map<string, Block>()
-
   for (const block of blocks) {
     if (block.BlockType === 'KEY_VALUE_SET') {
       if (block.EntityTypes?.includes('KEY')) keyMap.set(block.Id!, block)
       if (block.EntityTypes?.includes('VALUE')) valueMap.set(block.Id!, block)
     }
   }
-
   const getText = (block: Block): string =>
     (block.Relationships ?? [])
       .filter(r => r.Type === 'CHILD')
@@ -40,7 +37,6 @@ async function extractWithTextract(buffer: Buffer): Promise<{ pairs: Record<stri
       .map(b => b.Text ?? '')
       .join(' ')
       .trim()
-
   const pairs: Record<string, string> = {}
   for (const [, keyBlock] of keyMap) {
     const keyText = getText(keyBlock).toLowerCase()
@@ -50,18 +46,43 @@ async function extractWithTextract(buffer: Buffer): Promise<{ pairs: Record<stri
       if (valBlock) pairs[keyText] = getText(valBlock)
     }
   }
-
   const rawText = blocks.filter(b => b.BlockType === 'LINE').map(b => b.Text ?? '').join('\n')
   return { pairs, rawText }
 }
 
-async function extractWithClaude(pdfText: string): Promise<{ pairs: Record<string, string>; rawText: string }> {
-  const prompt = `Analizează acest text dintr-un document de transport si extrage campurile. Returneaza DOAR JSON valid fara backticks fara text inainte sau dupa. Campurile goale lasa ca string gol.
+function parseClaudeJson(content: string, fallbackText: string): { pairs: Record<string, string>; rawText: string } {
+  const attempts = [
+    content,
+    content.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim(),
+    content.replace(/```json/gi, '').replace(/```/g, '').trim(),
+  ]
+  for (const attempt of attempts) {
+    try {
+      const parsed = JSON.parse(attempt)
+      if (parsed.pairs) return { pairs: parsed.pairs, rawText: fallbackText }
+    } catch {
+      // continue
+    }
+  }
+  const jsonMatch = content.match(/\{[\s\S]*\}/)
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0])
+      if (parsed.pairs) return { pairs: parsed.pairs, rawText: fallbackText }
+    } catch {
+      // continue
+    }
+  }
+  return { pairs: {}, rawText: fallbackText }
+}
 
-TEXT DOCUMENT:
+async function extractWithClaude(pdfText: string): Promise<{ pairs: Record<string, string>; rawText: string }> {
+  const prompt = `Analizează textul urmator dintr-un document de transport si extrage campurile cerute. IMPORTANT: returneaza DOAR obiectul JSON, fara backticks, fara explicatii, fara text in plus.
+
+TEXT:
 ${pdfText.substring(0, 3000)}
 
-FORMAT RASPUNS (DOAR JSON):
+RASPUNS (doar JSON):
 {"pairs":{"client":"","numar comanda":"","data":"","transportator":"","numar inmatriculare":"","semiremorca":"","sofer":"","tarif":"","moneda":"","referinta":"","expeditor":"","destinatar":"","localitate incarcare":"","localitate descarcare":"","marfa":"","termen plata":""},"rawText":""}`
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -85,48 +106,8 @@ FORMAT RASPUNS (DOAR JSON):
 
   const data = await response.json()
   const content = data.content[0].text.trim()
-
-  console.log('Claude raw response:', content.substring(0, 200))
-
-  try {
-    const clean = content
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/i, '')
-      .replace(/\s*```$/i, '')
-      .trim()
-    const parsed = JSON.parse(clean)
-    return { pairs: parsed.pairs || {}, rawText: pdfText }
-  } catch {
-    const jsonMatch = content.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      try {
-        const parsed = JSON.parse(jsonMatch[0])
-        return { pairs: parsed.pairs || {}, rawText: pdfText }
-      } catch {
-        return { pairs: {}, rawText: pdfText }
-      }
-    }
-    return { pairs: {}, rawText: pdfText }
-  }
-    return { pairs: parsed.pairs || {}, rawText: pdfText }
-  } catch {
-    const clean = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-    try {
-      const parsed = JSON.parse(clean)
-      return { pairs: parsed.pairs || {}, rawText: pdfText }
-    } catch {
-      const jsonMatch = content.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        try {
-          const parsed = JSON.parse(jsonMatch[0])
-          return { pairs: parsed.pairs || {}, rawText: pdfText }
-        } catch {
-          return { pairs: {}, rawText: pdfText }
-        }
-      }
-      return { pairs: {}, rawText: pdfText }
-    }
-  }
+  console.log('Claude raw response:', content.substring(0, 300))
+  return parseClaudeJson(content, pdfText)
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -154,21 +135,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (isUnavailable) {
         console.log('Textract unavailable, using Claude with text...')
-
         if (!pdfText || pdfText.trim().length < 10) {
-          return res.status(200).json({
-            pairs: {},
-            rawText: '',
-            source: 'none',
-            error: 'PDF text not available'
-          })
+          return res.status(200).json({ pairs: {}, rawText: '', source: 'none' })
         }
-
         const result = await extractWithClaude(pdfText)
         console.log('Claude success:', JSON.stringify(result.pairs).substring(0, 200))
         return res.status(200).json({ ...result, source: 'claude' })
       }
-
       throw textractErr
     }
   } catch (err) {
