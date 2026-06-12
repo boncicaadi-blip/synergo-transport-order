@@ -51,6 +51,18 @@ async function extractWithTextract(buffer: Buffer): Promise<{ pairs: Record<stri
 }
 
 function parseClaudeJson(content: string, fallbackText: string): { pairs: Record<string, string>; rawText: string } {
+  const stripped = content
+    .replace(/^[\s\S]*?(\{)/m, '$1')
+    .replace(/\}[\s\S]*$/, '}')
+    .trim()
+  
+  try {
+    const parsed = JSON.parse(stripped)
+    if (parsed.pairs) return { pairs: parsed.pairs, rawText: fallbackText }
+  } catch {
+    // fall through
+  }
+
   const attempts = [
     content,
     content.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim(),
