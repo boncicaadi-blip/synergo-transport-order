@@ -778,13 +778,13 @@ export default function App() {
                       <div style={{ marginBottom: '8px', padding: '6px', background: '#f0faf4', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
                         <div style={{ color: '#16a34a', fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}>↑ ÎNCĂRCARE</div>
                         <div style={{ fontWeight: '500', fontSize: '10px' }}>{incarcare?.partener || '—'}</div>
-                        <div style={{ color: '#6b7280', fontSize: '10px' }}>{incarcare?.localitate || ''}</div>
+                        <div style={{ color: '#6b7280', fontSize: '10px' }}>{(incarcare?.localitate || '').substring(0, 40)}</div>
                         <div style={{ color: '#6b7280', fontSize: '10px' }}>{incarcare?.data || ''}</div>
                       </div>
                       <div style={{ marginBottom: '8px', padding: '6px', background: '#f0f4ff', borderRadius: '4px', border: `1px solid ${BLUE}40` }}>
                         <div style={{ color: BLUE, fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}>↓ DESCĂRCARE</div>
                         <div style={{ fontWeight: '500', fontSize: '10px' }}>{descarcare?.partener || '—'}</div>
-                        <div style={{ color: '#6b7280', fontSize: '10px' }}>{descarcare?.localitate || ''}</div>
+                        <div style={{ color: '#6b7280', fontSize: '10px' }}>{(descarcare?.localitate || '').substring(0, 40)}</div>
                         <div style={{ color: '#6b7280', fontSize: '10px' }}>{descarcare?.data || ''}</div>
                       </div>
                       <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '8px' }}>
