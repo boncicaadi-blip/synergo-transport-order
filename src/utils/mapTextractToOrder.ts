@@ -19,14 +19,23 @@ export function mapTextractToOrder(
 ): Partial<TransportOrder> {
   const order = emptyOrder()
 
-  // Referinta = numar comanda din document
+  // Referinta = numar comanda din document (DID2167 etc.)
   if (pairs['numar comanda']) order.referinta = pairs['numar comanda']
 
   // Data comenzii
   if (pairs['data']) order.data = parseDate(pairs['data'])
 
-  // Client = transportatorul (cel care primeste comanda)
-  if (pairs['client']) order.client = pairs['client']
+  // Client = ORDONATORUL cursei (cel care emite comanda)
+  // In documentul DID: pairs['transportator'] = DIDI TRANS (ordonatorul)
+  // pairs['client'] = VALENTIN VLAD (transportatorul care executa)
+  if (pairs['transportator'] && pairs['client']) {
+    // Avem ambele campuri -> ordonatorul e in 'transportator', executantul in 'client'
+    order.client = pairs['transportator']
+  } else if (pairs['client']) {
+    order.client = pairs['client']
+  } else if (pairs['transportator']) {
+    order.client = pairs['transportator']
+  }
 
   // Moneda
   if (pairs['moneda']) order.moneda = pairs['moneda']
@@ -66,27 +75,27 @@ export function mapTextractToOrder(
     }
   }
 
-  // Date incarcare
+  // Date incarcare din rawText
   const incDataMatch = rawText.match(/1\s*[Ii]ncarcare\s+Data:\s*(\d{2}[./]\d{2}[./]\d{4})\s+ora:\s*(\d{2}:\d{2})/i)
   const incAdresaMatch = rawText.match(/[Ii]ncarcare[\s\S]*?Adresa:([^\n]+)/i)
 
-  // Date descarcare
+  // Date descarcare din rawText
   const decDataMatch = rawText.match(/2\s*[Dd]escarcare\s+Data:\s*(\d{2}[./]\d{2}[./]\d{4})\s+ora:\s*(\d{2}:\d{2})/i)
   const decAdresaMatch = rawText.match(/[Dd]escarcare[\s\S]*?Adresa:([^\n]+)/i)
 
-  // Partener incarcare = expeditor sau prima parte din adresa
+  // Incarcare - partener si localitate
   const incAdresaFull = incAdresaMatch ? incAdresaMatch[1].trim() : ''
   const incParts = incAdresaFull.split('-')
-  const incPartener = pairs['expeditor'] || (incParts[0]?.trim()) || ''
+  const incPartener = pairs['expeditor'] || incParts[0]?.trim() || ''
   const incLocalitate = shortAddress(incParts.slice(1).join('-').trim() || incAdresaFull)
 
-  // Partener descarcare = destinatar sau prima parte din adresa
+  // Descarcare - partener si localitate
   const decAdresaFull = decAdresaMatch ? decAdresaMatch[1].trim() : ''
   const decParts = decAdresaFull.split('-')
-  const decPartener = pairs['destinatar'] || (decParts[0]?.trim()) || ''
+  const decPartener = pairs['destinatar'] || decParts[0]?.trim() || ''
   const decLocalitate = shortAddress(decParts.slice(1).join('-').trim() || decAdresaFull)
 
-  const details: RouteDetail[] = [
+  order.detalii = [
     {
       id: '1',
       ord: 1,
@@ -101,7 +110,7 @@ export function mapTextractToOrder(
       firma: incPartener,
       referinta: order.referinta || '',
       articolMarfa: pairs['marfa'] || '',
-    },
+    } as RouteDetail,
     {
       id: '2',
       ord: 2,
@@ -116,28 +125,31 @@ export function mapTextractToOrder(
       firma: decPartener,
       referinta: order.referinta || '',
       articolMarfa: pairs['marfa'] || '',
-    },
+    } as RouteDetail,
   ]
 
-  order.detalii = details
-
   // Planificare Transport Terti
-  const transportator = pairs['transportator'] || ''
-  if (transportator) {
+  // Executantul transportului = pairs['client'] (VALENTIN VLAD)
+  const executant = pairs['client'] || ''
+  const nrInmatriculare = pairs['numar inmatriculare'] || ''
+  const sofer = pairs['sofer'] || ''
+  const semiremorca = pairs['semiremorca'] || ''
+
+  if (executant) {
     order.tipPlanificare = 'Transport terti'
     order.planificare = {
       tip: 'Transport terti',
       nrComanda: '',
       beneficiar: '',
-      transportator,
+      transportator: executant,
       termenPlata: order.termen || '30',
       tva: '21',
       tarifTransport: order.tarifFaraTVA || '',
       tarifCuTVA: '',
       moneda: order.moneda || 'EUR',
-      nrInmatriculare: pairs['numar inmatriculare'] || '',
-      semiremorca: pairs['semiremorca'] || '',
-      sofer: pairs['sofer'] || '',
+      nrInmatriculare,
+      semiremorca,
+      sofer,
     } as unknown as TransportOrder['planificare']
   }
 
