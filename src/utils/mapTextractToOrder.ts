@@ -44,7 +44,7 @@ export function mapTextractToOrder(
   if (pairs['marfa']) observatiiParts.push(`Marfă: ${pairs['marfa']}`)
   if (pairs['expeditor']) observatiiParts.push(`Expeditor: ${pairs['expeditor']}`)
   if (pairs['destinatar']) observatiiParts.push(`Destinatar: ${pairs['destinatar']}`)
-  if (observatiiParts.length > 0) order.observatii = observatiiParts.join(' | ')
+  if (observatiiParts.length > 0) order.observatii = rawText.substring(0, 2000)
 
   // Fallback din rawText pentru data
   if (!order.data) {

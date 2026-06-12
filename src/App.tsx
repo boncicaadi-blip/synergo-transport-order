@@ -761,36 +761,34 @@ export default function App() {
                   </div>
 
                   {/* REZUMAT */}
-                  <div style={{ width: '200px', background: '#f8faff', borderRadius: '6px', border: `1px solid ${INDIGO}30`, overflow: 'hidden' }}>
-                    <div style={{ background: INDIGO, color: 'white', padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>Rezumat</div>
-                    <div style={{ padding: '10px 12px', fontSize: '11px' }}>
-                      <div style={{ marginBottom: '8px' }}>
-                        <div style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase', marginBottom: '2px' }}>Comandă</div>
-                        <div style={{ fontWeight: 'bold', color: INDIGO }}>{order.numar || '—'}</div>
-                      </div>
-                      <div style={{ marginBottom: '8px' }}>
-                        <div style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase', marginBottom: '2px' }}>Client</div>
-                        <div style={{ fontWeight: '500' }}>{order.client || '—'}</div>
-                      </div>
-                      <div style={{ marginBottom: '8px', padding: '6px', background: '#f0faf4', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
-                        <div style={{ color: '#16a34a', fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}>↑ ÎNCĂRCARE</div>
-                        <div style={{ fontWeight: '500', fontSize: '10px' }}>{incarcare?.partener || '—'}</div>
-                        <div style={{ color: '#6b7280', fontSize: '10px' }}>{incarcare?.localitate || ''}</div>
-                        <div style={{ color: '#6b7280', fontSize: '10px' }}>{incarcare?.data || ''}</div>
-                      </div>
-                      <div style={{ marginBottom: '8px', padding: '6px', background: '#f0f4ff', borderRadius: '4px', border: `1px solid ${BLUE}40` }}>
-                        <div style={{ color: BLUE, fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}>↓ DESCĂRCARE</div>
-                        <div style={{ fontWeight: '500', fontSize: '10px' }}>{descarcare?.partener || '—'}</div>
-                        <div style={{ color: '#6b7280', fontSize: '10px' }}>{descarcare?.localitate || ''}</div>
-                        <div style={{ color: '#6b7280', fontSize: '10px' }}>{descarcare?.data || ''}</div>
-                      </div>
-                      <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '8px' }}>
-                        <div style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase', marginBottom: '2px' }}>Tarif</div>
-                        <div style={{ fontWeight: 'bold', color: MAGENTA, fontSize: '13px' }}>{order.tarifFaraTVA ? `${order.tarifFaraTVA} ${order.moneda}` : '—'}</div>
-                        {order.tarifCuTVA && <div style={{ color: '#6b7280', fontSize: '10px' }}>Cu TVA: {order.tarifCuTVA} {order.moneda}</div>}
-                      </div>
-                    </div>
-                  </div>
+                  <div style={{ padding: '10px 12px', fontSize: '11px' }}>
+  <div style={{ marginBottom: '8px' }}>
+    <div style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase', marginBottom: '2px' }}>Comandă</div>
+    <div style={{ fontWeight: 'bold', color: INDIGO }}>{order.numar || '—'}</div>
+    <div style={{ color: '#6b7280', fontSize: '10px' }}>{order.referinta || ''}</div>
+  </div>
+  <div style={{ marginBottom: '8px' }}>
+    <div style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase', marginBottom: '2px' }}>Client</div>
+    <div style={{ fontWeight: '500' }}>{order.client || '—'}</div>
+  </div>
+  <div style={{ marginBottom: '8px', padding: '6px', background: '#f0faf4', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
+    <div style={{ color: '#16a34a', fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}>↑ ÎNCĂRCARE</div>
+    <div style={{ fontWeight: '500', fontSize: '10px' }}>{incarcare?.partener || '—'}</div>
+    <div style={{ color: '#6b7280', fontSize: '10px' }}>{incarcare?.localitate?.substring(0, 40) || ''}</div>
+    <div style={{ color: '#6b7280', fontSize: '10px' }}>{incarcare?.data || ''} {incarcare?.ora ? `ora ${incarcare.ora}` : ''}</div>
+  </div>
+  <div style={{ marginBottom: '8px', padding: '6px', background: '#f0f4ff', borderRadius: '4px', border: `1px solid ${BLUE}40` }}>
+    <div style={{ color: BLUE, fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}>↓ DESCĂRCARE</div>
+    <div style={{ fontWeight: '500', fontSize: '10px' }}>{descarcare?.partener || '—'}</div>
+    <div style={{ color: '#6b7280', fontSize: '10px' }}>{descarcare?.localitate?.substring(0, 40) || ''}</div>
+    <div style={{ color: '#6b7280', fontSize: '10px' }}>{descarcare?.data || ''} {descarcare?.ora ? `ora ${descarcare.ora}` : ''}</div>
+  </div>
+  <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '8px' }}>
+    <div style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase', marginBottom: '2px' }}>Tarif</div>
+    <div style={{ fontWeight: 'bold', color: MAGENTA, fontSize: '13px' }}>{order.tarifFaraTVA ? `${order.tarifFaraTVA} ${order.moneda}` : '—'}</div>
+    {order.tarifCuTVA && <div style={{ color: '#6b7280', fontSize: '10px' }}>Cu TVA: {order.tarifCuTVA} {order.moneda}</div>}
+  </div>
+</div>
                 </div>
 
                 {/* DETALII RUTĂ */}
