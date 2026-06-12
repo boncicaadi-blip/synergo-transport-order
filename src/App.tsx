@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import PdfDropZone from './components/PdfDropZone'
 import MapPicker from './components/MapPicker'
+import RouteMap from './components/RouteMap'
 import type { MapLocation } from './components/MapPicker'
 import { emptyOrder, generateNrComanda } from './types/TransportOrder'
 import type {
@@ -435,6 +436,7 @@ export default function App() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [loadingList, setLoadingList] = useState(false)
   const [showMap, setShowMap] = useState(false)
+  const [showRoute, setShowRoute] = useState(false)
 
   const set = (field: keyof TransportOrder) => (value: string) =>
     setOrder(prev => ({ ...prev, [field]: value }))
@@ -581,7 +583,7 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#eef0f5', fontFamily: '"Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif', fontSize: '12px' }}>
-
+{showRoute && <RouteMap detalii={order.detalii} onClose={() => setShowRoute(false)} />}
       {showMap && <MapPicker onConfirm={handleMapConfirm} onClose={() => setShowMap(false)} />}
 
       {/* HEADER */}
@@ -790,7 +792,10 @@ export default function App() {
   </div>
 </div>
                 </div>
-
+<button onClick={() => setShowRoute(true)}
+  style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'white', background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer' }}>
+  🗺️ Vezi ruta
+</button>
                 {/* DETALII RUTĂ */}
                 <div style={{ background: 'white', borderRadius: '6px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
                   <div style={{ background: INDIGO, color: 'white', padding: '8px 16px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
