@@ -95,6 +95,7 @@ RASPUNS (doar JSON):
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 512,
+      system: 'Raspunzi DOAR cu JSON pur, fara backticks, fara markdown, fara text suplimentar. Primul caracter din raspuns trebuie sa fie {',
       messages: [{ role: 'user', content: prompt }],
     }),
   })
