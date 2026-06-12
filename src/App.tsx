@@ -3,6 +3,7 @@ import PdfDropZone from './components/PdfDropZone'
 import MapPicker from './components/MapPicker'
 import type { MapLocation } from './components/MapPicker'
 import RouteMap from './components/RouteMap'
+import LotMarfaView from './components/LotMarfaView'
 import { emptyOrder, generateNrComanda } from './types/TransportOrder'
 import type {
   TransportOrder, RouteDetail, TipPlanificare,
@@ -430,7 +431,7 @@ export default function App() {
   const [extracted, setExtracted] = useState(false)
   const [showImport, setShowImport] = useState(true)
   const [activeTab, setActiveTab] = useState('general')
-  const [view, setView] = useState<'form' | 'list'>('form')
+  const [view, setView] = useState<'form' | 'list' | 'loturi'>('form')
   const [orders, setOrders] = useState<(TransportOrder & { id: string })[]>([])
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
@@ -596,7 +597,7 @@ export default function App() {
           <div>
             <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.6)' }}>Rutier</div>
             <div style={{ fontSize: '13px', fontWeight: '600', color: 'white' }}>
-              {view === 'list' ? 'Listă Comenzi' : <>Comandă Rutieră {order.numar && <span style={{ marginLeft: '8px', color: MAGENTA, fontWeight: 'bold' }}>· {order.numar}</span>}</>}
+              {view === 'list' ? 'Listă Comenzi' : view === 'loturi' ? 'Loturi Marfă' : <>Comandă Rutieră {order.numar && <span style={{ marginLeft: '8px', color: MAGENTA, fontWeight: 'bold' }}>· {order.numar}</span>}</>}
             </div>
           </div>
         </div>
@@ -610,6 +611,10 @@ export default function App() {
               <FileUp style={{ width: '14px', height: '14px' }} /> Import PDF
             </button>
           )}
+          <button onClick={() => setView('loturi')}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'white', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}>
+            📦 Loturi Marfă
+          </button>
           {view === 'list' ? (
             <button onClick={() => setView('form')} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'white', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}>
               <ArrowLeft style={{ width: '14px', height: '14px' }} /> Înapoi
@@ -633,11 +638,16 @@ export default function App() {
       </header>
 
       {/* BREADCRUMB */}
+      {view !== 'loturi' && (
       <div style={{ padding: '6px 20px', fontSize: '10px', color: '#6b7280', borderBottom: '1px solid #e5e7eb', background: 'white', display: 'flex', alignItems: 'center', gap: '4px' }}>
         <span>Rutier</span><span>›</span>
         <span style={{ cursor: 'pointer', color: BLUE }} onClick={handleLoadList}>Comenzi rutiere</span>
         {view === 'form' && <><span>›</span><span style={{ fontWeight: '500', color: INDIGO }}>{order.numar || 'Comandă nouă'}</span></>}
       </div>
+      )}
+
+      {/* LOTURI MARFA */}
+      {view === 'loturi' && <LotMarfaView onBack={() => setView('form')} />}
 
       {/* LISTA */}
       {view === 'list' && (
