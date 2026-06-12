@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import PdfDropZone from './components/PdfDropZone'
 import MapPicker from './components/MapPicker'
-import RouteMap from './components/RouteMap'
 import type { MapLocation } from './components/MapPicker'
+import RouteMap from './components/RouteMap'
 import { emptyOrder, generateNrComanda } from './types/TransportOrder'
 import type {
   TransportOrder, RouteDetail, TipPlanificare,
@@ -500,7 +500,7 @@ export default function App() {
   // Ctrl+S shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault()
         if (view === 'form') handleSave()
       }
@@ -583,8 +583,9 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#eef0f5', fontFamily: '"Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif', fontSize: '12px' }}>
-{showRoute && <RouteMap detalii={order.detalii} onClose={() => setShowRoute(false)} />}
+
       {showMap && <MapPicker onConfirm={handleMapConfirm} onClose={() => setShowMap(false)} />}
+      {showRoute && <RouteMap detalii={order.detalii} onClose={() => setShowRoute(false)} />}
 
       {/* HEADER */}
       <header style={{ background: `linear-gradient(135deg, ${INDIGO} 0%, #1a2fa0 100%)`, height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
@@ -763,44 +764,47 @@ export default function App() {
                   </div>
 
                   {/* REZUMAT */}
-                  <div style={{ padding: '10px 12px', fontSize: '11px' }}>
-  <div style={{ marginBottom: '8px' }}>
-    <div style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase', marginBottom: '2px' }}>Comandă</div>
-    <div style={{ fontWeight: 'bold', color: INDIGO }}>{order.numar || '—'}</div>
-    <div style={{ color: '#6b7280', fontSize: '10px' }}>{order.referinta || ''}</div>
-  </div>
-  <div style={{ marginBottom: '8px' }}>
-    <div style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase', marginBottom: '2px' }}>Client</div>
-    <div style={{ fontWeight: '500' }}>{order.client || '—'}</div>
-  </div>
-  <div style={{ marginBottom: '8px', padding: '6px', background: '#f0faf4', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
-    <div style={{ color: '#16a34a', fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}>↑ ÎNCĂRCARE</div>
-    <div style={{ fontWeight: '500', fontSize: '10px' }}>{incarcare?.partener || '—'}</div>
-    <div style={{ color: '#6b7280', fontSize: '10px' }}>{incarcare?.localitate?.substring(0, 40) || ''}</div>
-    <div style={{ color: '#6b7280', fontSize: '10px' }}>{incarcare?.data || ''} {incarcare?.ora ? `ora ${incarcare.ora}` : ''}</div>
-  </div>
-  <div style={{ marginBottom: '8px', padding: '6px', background: '#f0f4ff', borderRadius: '4px', border: `1px solid ${BLUE}40` }}>
-    <div style={{ color: BLUE, fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}>↓ DESCĂRCARE</div>
-    <div style={{ fontWeight: '500', fontSize: '10px' }}>{descarcare?.partener || '—'}</div>
-    <div style={{ color: '#6b7280', fontSize: '10px' }}>{descarcare?.localitate?.substring(0, 40) || ''}</div>
-    <div style={{ color: '#6b7280', fontSize: '10px' }}>{descarcare?.data || ''} {descarcare?.ora ? `ora ${descarcare.ora}` : ''}</div>
-  </div>
-  <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '8px' }}>
-    <div style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase', marginBottom: '2px' }}>Tarif</div>
-    <div style={{ fontWeight: 'bold', color: MAGENTA, fontSize: '13px' }}>{order.tarifFaraTVA ? `${order.tarifFaraTVA} ${order.moneda}` : '—'}</div>
-    {order.tarifCuTVA && <div style={{ color: '#6b7280', fontSize: '10px' }}>Cu TVA: {order.tarifCuTVA} {order.moneda}</div>}
-  </div>
-</div>
+                  <div style={{ width: '200px', background: '#f8faff', borderRadius: '6px', border: `1px solid ${INDIGO}30`, overflow: 'hidden' }}>
+                    <div style={{ background: INDIGO, color: 'white', padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>Rezumat</div>
+                    <div style={{ padding: '10px 12px', fontSize: '11px' }}>
+                      <div style={{ marginBottom: '8px' }}>
+                        <div style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase', marginBottom: '2px' }}>Comandă</div>
+                        <div style={{ fontWeight: 'bold', color: INDIGO }}>{order.numar || '—'}</div>
+                      </div>
+                      <div style={{ marginBottom: '8px' }}>
+                        <div style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase', marginBottom: '2px' }}>Client</div>
+                        <div style={{ fontWeight: '500' }}>{order.client || '—'}</div>
+                      </div>
+                      <div style={{ marginBottom: '8px', padding: '6px', background: '#f0faf4', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
+                        <div style={{ color: '#16a34a', fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}>↑ ÎNCĂRCARE</div>
+                        <div style={{ fontWeight: '500', fontSize: '10px' }}>{incarcare?.partener || '—'}</div>
+                        <div style={{ color: '#6b7280', fontSize: '10px' }}>{incarcare?.localitate || ''}</div>
+                        <div style={{ color: '#6b7280', fontSize: '10px' }}>{incarcare?.data || ''}</div>
+                      </div>
+                      <div style={{ marginBottom: '8px', padding: '6px', background: '#f0f4ff', borderRadius: '4px', border: `1px solid ${BLUE}40` }}>
+                        <div style={{ color: BLUE, fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}>↓ DESCĂRCARE</div>
+                        <div style={{ fontWeight: '500', fontSize: '10px' }}>{descarcare?.partener || '—'}</div>
+                        <div style={{ color: '#6b7280', fontSize: '10px' }}>{descarcare?.localitate || ''}</div>
+                        <div style={{ color: '#6b7280', fontSize: '10px' }}>{descarcare?.data || ''}</div>
+                      </div>
+                      <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '8px' }}>
+                        <div style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase', marginBottom: '2px' }}>Tarif</div>
+                        <div style={{ fontWeight: 'bold', color: MAGENTA, fontSize: '13px' }}>{order.tarifFaraTVA ? `${order.tarifFaraTVA} ${order.moneda}` : '—'}</div>
+                        {order.tarifCuTVA && <div style={{ color: '#6b7280', fontSize: '10px' }}>Cu TVA: {order.tarifCuTVA} {order.moneda}</div>}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-<button onClick={() => setShowRoute(true)}
-  style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'white', background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer' }}>
-  🗺️ Vezi ruta
-</button>
+
                 {/* DETALII RUTĂ */}
                 <div style={{ background: 'white', borderRadius: '6px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
                   <div style={{ background: INDIGO, color: 'white', padding: '8px 16px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span>Detalii Rută</span>
                     <div style={{ display: 'flex', gap: '6px' }}>
+                      <button onClick={() => setShowRoute(true)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'white', background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer' }}>
+                        🗺️ Vezi ruta
+                      </button>
                       <button onClick={() => setShowMap(true)}
                         style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'white', background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer' }}>
                         <Map style={{ width: '12px', height: '12px' }} /> Selectare pe hartă
