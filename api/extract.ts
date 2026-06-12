@@ -51,40 +51,33 @@ async function extractWithTextract(buffer: Buffer): Promise<{ pairs: Record<stri
 }
 
 function parseClaudeJson(content: string, fallbackText: string): { pairs: Record<string, string>; rawText: string } {
-  const stripped = content
-    .replace(/^[\s\S]*?(\{)/m, '$1')
-    .replace(/\}[\s\S]*$/, '}')
-    .trim()
-  
-  try {
-    const parsed = JSON.parse(stripped)
-    if (parsed.pairs) return { pairs: parsed.pairs, rawText: fallbackText }
-  } catch {
-    // fall through
-  }
-
-  const attempts = [
+  const toTry = [
     content,
-    content.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim(),
-    content.replace(/```json/gi, '').replace(/```/g, '').trim(),
+    content.replace(/^```json\s*/i, '').replace(/\s*```\s*$/i, '').trim(),
+    content.replace(/```/g, '').trim(),
   ]
-  for (const attempt of attempts) {
+  for (const s of toTry) {
     try {
-      const parsed = JSON.parse(attempt)
-      if (parsed.pairs) return { pairs: parsed.pairs, rawText: fallbackText }
-    } catch {
-      // continue
-    }
+      const obj = JSON.parse(s)
+      if (obj && typeof obj.pairs === 'object') {
+        console.log('Parsed OK, keys:', Object.keys(obj.pairs).join(','))
+        return { pairs: obj.pairs, rawText: fallbackText }
+      }
+    } catch (_) { /* continue */ }
   }
-  const jsonMatch = content.match(/\{[\s\S]*\}/)
-  if (jsonMatch) {
+  // Last resort: find first { to last }
+  const start = content.indexOf('{')
+  const end = content.lastIndexOf('}')
+  if (start !== -1 && end !== -1 && end > start) {
     try {
-      const parsed = JSON.parse(jsonMatch[0])
-      if (parsed.pairs) return { pairs: parsed.pairs, rawText: fallbackText }
-    } catch {
-      // continue
-    }
+      const obj = JSON.parse(content.slice(start, end + 1))
+      if (obj && typeof obj.pairs === 'object') {
+        console.log('Parsed via slice, keys:', Object.keys(obj.pairs).join(','))
+        return { pairs: obj.pairs, rawText: fallbackText }
+      }
+    } catch (_) { /* give up */ }
   }
+  console.log('Parse failed, content start:', content.substring(0, 50))
   return { pairs: {}, rawText: fallbackText }
 }
 
